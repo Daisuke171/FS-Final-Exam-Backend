@@ -6,10 +6,10 @@ import { GameState } from './cw-state.enum';
 export class CodingWarService {
   private gameState: Map<string, CWStateMachine> = new Map();
 
-  createGame(gameId: string): string {
+  createGame(gameId: string): GameState {
     const machine = new CWStateMachine();
     this.gameState.set(gameId, machine);
-    return `Game ${gameId} created with state: ${machine.getState()}`;
+    return machine.getState();
   }
 
   advanceGame(gameId: string, nextState: GameState): string {
