@@ -6,6 +6,11 @@ import { OrderState } from './order-state.enum';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @Get()
+  healthCheck() {
+    return 'OK';
+  }
+
   // Create a new order
   @Post(':id')
   create(@Param('id') id: string) {
