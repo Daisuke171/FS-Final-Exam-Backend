@@ -8,7 +8,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { GameService } from '../game.service';
+import { GameService } from '../rps.service';
 import { Moves, Game, StartingState, PlayingState } from '../states/rps.states';
 
 interface StateProps {
