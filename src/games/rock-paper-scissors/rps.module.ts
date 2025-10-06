@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { GameGateway } from './gateway/rps.gateway';
-import { GameService } from './rps.service';
+import { RpsGateway } from './gateway/rps.gateway';
+import { RpsService } from './rps.service';
 
 @Module({
-  providers: [GameGateway, GameService],
+  providers: [RpsGateway, RpsService],
 })
-export class GameModule {}
+export class RpsModule {}

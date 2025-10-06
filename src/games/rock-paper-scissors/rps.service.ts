@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Game, RoomConfig, WaitingState } from './states/rps.states';
 
 @Injectable()
-export class GameService {
+export class RpsService {
   private games: Map<string, Game> = new Map();
 
   createGame(roomId: string, roomConfig: RoomConfig): Game {

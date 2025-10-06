@@ -8,7 +8,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { GameService } from '../rps.service';
+import { RpsService } from '../rps.service';
 import { Moves, Game, StartingState, PlayingState } from '../states/rps.states';
 
 interface StateProps {
@@ -34,14 +34,14 @@ interface StateProps {
     origin: '*',
   },
 })
-export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   // Map para trackear qué socket está en qué sala
   private playerRooms: Map<string, string> = new Map();
 
-  constructor(private gameService: GameService) {}
+  constructor(private gameService: RpsService) {}
 
   handleConnection(client: Socket) {
     console.log(`Cliente conectado: ${client.id}`);
