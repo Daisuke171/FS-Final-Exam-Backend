@@ -16,9 +16,13 @@ datasource db {
 
 model User {
   id         String   @id @default(uuid())
+  name       String
+  lastname   String
+  email      String   @unique
   username   String   @unique
   password   String
-  nickname   String
+  birthday   DateTime
+  nickname   String   @unique
   experience Int      @default(0)
   avatar     String
   createdAt  DateTime @default(now())
