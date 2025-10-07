@@ -153,6 +153,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     game.join(client.id);
+
     void client.join(roomId);
     this.playerRooms.set(client.id, roomId);
 
@@ -172,7 +173,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('joinRoom')
   handleJoinRoom(
-    @MessageBody() data: { roomId: string },
+    @MessageBody() data: { roomId: string; password?: string },
     @ConnectedSocket() client: Socket,
   ) {
     console.log(`Cliente ${client.id} quiere unirse a la sala ${data.roomId}`);
@@ -201,6 +202,22 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'La partida ya comenzó',
       });
       return;
+    }
+
+    if (game.roomConfig.isPrivate) {
+      if (!data.password) {
+        client.emit('isPrivate', {
+          message: 'Esta sala es privada',
+          roomId: data.roomId,
+        });
+        return;
+      }
+      if (game.roomConfig.password !== data.password) {
+        client.emit('joinRoomError', {
+          message: 'Contraseña incorrecta',
+        });
+        return;
+      }
     }
     game.setEmitCallback((event, payload) => {
       this.server.to(data.roomId).emit(event, payload);
