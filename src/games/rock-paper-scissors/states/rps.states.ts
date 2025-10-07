@@ -127,12 +127,10 @@ export class Game {
     this.state = newState;
     newState.onEnter(this);
 
-    // EMITIR AUTOMÁTICAMENTE DESPUÉS DE CAMBIAR ESTADO
     this.emitFullGameState();
   }
 
   private emitFullGameState(): void {
-    // Construir el estado completo
     const stateData = {
       state: this.getCurrentState(),
       players: Array.from(this.players.keys()),
@@ -162,12 +160,15 @@ export class WaitingState extends GameState {
   }
   handleJoin(playerId: string, game: Game): void {
     game.players.set(playerId, { id: playerId, socketId: playerId });
-    game.setHP(playerId, 100);
+    if (!game.hp.has(playerId)) {
+      game.setHP(playerId, 100);
+    }
   }
   handleMove() {}
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
     game.clearReady(playerId);
+    game.hp.delete(playerId);
     console.log(`Jugador ${playerId} se ha desconectado.`);
   }
 }
@@ -176,6 +177,10 @@ export class StartingState extends GameState {
   name = 'starting';
   private timerId: NodeJS.Timeout | null = null;
   onEnter(game: Game): void {
+    game.resetAllReady();
+    for (const playerId of game.players.keys()) {
+      game.setHP(playerId, 100);
+    }
     let countdown = 3;
 
     const countdownTick = () => {
@@ -197,6 +202,7 @@ export class StartingState extends GameState {
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
     game.clearReady(playerId);
+    game.hp.delete(playerId);
     console.log(`Jugador ${playerId} se ha desconectado.`);
   }
   onExit = (): void => {
@@ -388,7 +394,6 @@ export class RevealingState extends GameState {
 export class FinishedState extends GameState {
   name = 'finished';
   onEnter(game: Game): void {
-    game.resetAllReady();
     const [p1, p2] = Array.from(game.players.keys());
     const hp1 = game.getHP(p1);
     const hp2 = game.getHP(p2);
@@ -421,6 +426,7 @@ export class FinishedState extends GameState {
   handleMove() {}
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
+    game.hp.delete(playerId);
     console.log(`Jugador ${playerId} se desconectó del juego terminado`);
   }
 }

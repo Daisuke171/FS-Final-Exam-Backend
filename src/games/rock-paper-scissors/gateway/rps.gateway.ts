@@ -38,7 +38,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  // Map para trackear qué socket está en qué sala
   private playerRooms: Map<string, string> = new Map();
 
   constructor(private gameService: RpsService) {}
@@ -93,7 +92,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.warn(
           `[playerReadyForMatch] Estado incorrecto: ${currentState}`,
         );
-        // No es un error crítico, simplemente ignoramos
         return;
       }
 
@@ -128,9 +126,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.emitGameState(roomId, game);
 
     if (game.isAllReady() && game.players.size === 2) {
-      for (const pid of game.players.keys()) {
-        game.setHP(pid, 100);
-      }
       game.moves.clear();
 
       game.setState(new StartingState());
@@ -211,11 +206,9 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(data.roomId).emit(event, payload);
     });
     this.server.to(client.id).emit('joinRoomSuccess', { roomId: data.roomId });
-    // 2. Unir al jugador
     game.join(client.id);
     void client.join(data.roomId);
     this.playerRooms.set(client.id, data.roomId);
-    // 3. Emitir el estado actualizado
     this.emitGameState(data.roomId, game);
     console.log(this.emitGameState(data.roomId, game));
   }
@@ -225,17 +218,13 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; move: Moves },
     @ConnectedSocket() client: Socket,
   ) {
-    // TODO: Implementar
-    // 1. Buscar el juego
     const game: Game | undefined = this.gameService.getGame(data.roomId);
     if (!game) {
       client.emit('error', 'Juego no encontrado');
       return;
     }
 
-    // 2. Registrar la jugada
     game.move(client.id, data.move);
-    // 3. Emitir el estado actualizado
     this.emitGameState(data.roomId, game);
   }
   @SubscribeMessage('roomChat')
@@ -260,10 +249,8 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    // Verificar que el cliente esté en la sala
     const isInRoom = this.playerRooms.get(client.id) === data.roomId;
     if (!isInRoom) {
-      // Si no está en la sala pero es un jugador válido, agregarlo
       if (game.players.has(client.id)) {
         void client.join(data.roomId);
         this.playerRooms.set(client.id, data.roomId);
@@ -273,7 +260,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
-    // Emitir solo a este cliente el estado actual
     const stateData: StateProps = this.buildStateData(game);
     client.emit('gameState', stateData);
   }
