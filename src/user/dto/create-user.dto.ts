@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsDateString, Matches } from 'class-validator';
+import { IsString, IsEmail, IsDateString, Matches, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -12,6 +12,10 @@ export class CreateUserDto {
 
   @IsEmail()
   email: string;
+
+  @IsOptional()
+  @IsString()
+  nickname?: string;
 
   @Matches(/^(?=.*[A-Z])(?=.*[\W_]).{6,}$/, {
     message:
