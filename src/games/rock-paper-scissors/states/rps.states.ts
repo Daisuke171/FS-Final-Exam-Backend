@@ -50,6 +50,8 @@ export class Game {
   public history: RoundRecord[] = [];
   public ready: Map<string, boolean> = new Map();
   private emitCallback?: (event: string, data: any) => void;
+  private onRoomEmpty?: (roomId: string) => void;
+  private cleanupTimer?: NodeJS.Timeout;
 
   constructor(roomId: string, roomConfig: RoomConfig, initialState: GameState) {
     this.roomId = roomId;
@@ -58,6 +60,26 @@ export class Game {
     if (this.state.onEnter) {
       this.state.onEnter(this);
     }
+  }
+  setOnRoomEmptyCallback(callback: (roomId: string) => void) {
+    this.onRoomEmpty = callback;
+  }
+
+  private cancelCleanupTimer() {
+    if (this.cleanupTimer) {
+      clearTimeout(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+  }
+  private startCleanupTimer() {
+    this.cancelCleanupTimer();
+    this.cleanupTimer = setTimeout(() => {
+      if (this.players.size === 0) {
+        if (this.onRoomEmpty) {
+          this.onRoomEmpty(this.roomId);
+        }
+      }
+    }, 5000);
   }
 
   setReady(playerId: string, isReady: boolean) {
@@ -99,6 +121,7 @@ export class Game {
   }
 
   join(playerId: string) {
+    this.cancelCleanupTimer();
     if (this.state.handleJoin) {
       this.state.handleJoin(playerId, this);
     }
@@ -114,6 +137,12 @@ export class Game {
     if (this.state.handleDisconnect) {
       this.state.handleDisconnect(playerId, this);
     }
+    if (this.players.size === 0) {
+      this.startCleanupTimer();
+    }
+  }
+  cleanup() {
+    this.cancelCleanupTimer();
   }
 
   getCurrentState(): string {

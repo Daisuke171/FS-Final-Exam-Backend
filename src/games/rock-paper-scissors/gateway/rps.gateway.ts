@@ -55,7 +55,9 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (game) {
         game.disconnect(client.id);
         game.clearReady(client.id);
-        this.emitGameState(roomId, game);
+        if (game.players.size > 0) {
+          this.emitGameState(roomId, game);
+        }
       }
       this.playerRooms.delete(client.id);
     }
@@ -152,6 +154,10 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(roomId).emit(event, payload);
     });
 
+    game.setOnRoomEmptyCallback((emptyRoomId) => {
+      this.gameService.deleteGame(emptyRoomId);
+    });
+
     game.join(client.id);
 
     void client.join(roomId);
@@ -222,6 +228,9 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     game.setEmitCallback((event, payload) => {
       this.server.to(data.roomId).emit(event, payload);
     });
+    game.setOnRoomEmptyCallback((emptyRoomId) => {
+      this.gameService.deleteGame(emptyRoomId);
+    });
     this.server.to(client.id).emit('joinRoomSuccess', { roomId: data.roomId });
     game.join(client.id);
     void client.join(data.roomId);
@@ -243,6 +252,11 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     game.move(client.id, data.move);
     this.emitGameState(data.roomId, game);
+  }
+  @SubscribeMessage('getPublicRooms')
+  handleGetPublicRooms(@ConnectedSocket() client: Socket) {
+    const publicRooms = this.gameService.getPublicRooms();
+    client.emit('publicRoomsList', publicRooms);
   }
   @SubscribeMessage('roomChat')
   handleRoomChat(client: Socket, payload: { roomId: string; message: string }) {
