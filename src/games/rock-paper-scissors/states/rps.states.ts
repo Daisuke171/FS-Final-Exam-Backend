@@ -222,6 +222,7 @@ export class PlayingState extends GameState {
   private readonly TICK = 100;
   private startTime = 0;
   onEnter(game: Game): void {
+    this.playersReadyForMatch.clear();
     console.log(
       `El juego ${game.roomId} está esperando que los clientes carguen la partida.`,
     );
@@ -232,7 +233,10 @@ export class PlayingState extends GameState {
     this.playersReadyForMatch.add(playerId);
     console.log(`Jugador ${playerId} ha cargado la partida.`);
 
-    if (this.playersReadyForMatch.size === game.players.size) {
+    if (
+      this.playersReadyForMatch.size === game.players.size &&
+      game.players.size === 2
+    ) {
       this.startGame(game);
     }
   }
