@@ -14,30 +14,30 @@ datasource db {
 }
 
 model User {
-  id         String      @id @default(uuid())
-  name       String
-  lastname   String
-  email      String      @unique
-  username   String      @unique
-  password   String
-  birthday   DateTime
-  nickname   String?     @unique @default("guest")
-  experience Int         @default(0)
-  coins      Float       @default(0)
-  level      Level       @relation(fields: [levelId], references: [Id])
-  levelId    Int
-  skins      UserSkins[]
-  friends    Friend[]
-  gameHistory GameHistory[]
+  id            String         @id @default(uuid())
+  name          String
+  lastname      String
+  email         String         @unique
+  username      String         @unique
+  password      String
+  birthday      DateTime
+  nickname      String?        @unique @default("guest")
+  experience    Int            @default(0)
+  coins         Float          @default(0)
+  level         Level          @relation(fields: [levelId], references: [Id])
+  levelId       Int
+  skins         UserSkins[]
+  friends       Friend[]
+  gameHistory   GameHistory[]
   gameFavorites GameFavorite[]
   notifications notification[]
-  chats      Chat[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  chats         Chat[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Skin {
-  Id    String      @id @default(uuid())
+  Id        String      @id @default(uuid())
   name      String
   img       String
   level     Int
@@ -70,18 +70,18 @@ model Level {
 }
 
 model Friend {
-  Id       String   @id @default(uuid())
-  status   String   @default("pending")
-  user     User     @relation(fields: [userId], references: [id])
-  userId   String
-  chat     Chat[]
-  active   Boolean  @default(false)
+  Id        String   @id @default(uuid())
+  status    String   @default("pending")
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  chat      Chat[]
+  active    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Game {
-  Id      String   @id @default(uuid())
+  Id          String         @id @default(uuid())
   name        String
   description String
   rules       String
@@ -94,47 +94,48 @@ model Game {
   history     GameHistory[]
   favorite    GameFavorite[]
   rooms       room[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model GameHistory {
+  id          String   @id @default(uuid())
+  game        Game     @relation(fields: [gameId], references: [Id])
+  gameId      String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  duration    Int
+  state       String
+  score       Int
+  totalDamage Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-model GameHistory {
-  id        String   @id @default(uuid())
-  game    Game     @relation(fields: [gameId], references: [Id])
-  gameId    String 
-  user     User     @relation(fields: [userId], references: [id])
-  userId    String
-  duration  Int
-  state     String
-  score     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model GameFavorite {
   id        String   @id @default(uuid())
-  game     Game     @relation(fields: [gameId], references: [Id])
+  game      Game     @relation(fields: [gameId], references: [Id])
   gameId    String
-  user     User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Chat {
-  Id       String   @id @default(uuid())
-  user     User     @relation(fields: [userId], references: [id])
-  userId   String
-  friend Friend  @relation(fields: [friendId], references: [Id])
-  friendId String
-  messages chatMessage[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  Id        String        @id @default(uuid())
+  user      User          @relation(fields: [userId], references: [id])
+  userId    String
+  friend    Friend        @relation(fields: [friendId], references: [Id])
+  friendId  String
+  messages  chatMessage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
 model chatMessage {
-  Id       String   @id @default(uuid())
-  chat     Chat     @relation(fields: [chatId], references: [Id])
+  Id        String   @id @default(uuid())
+  chat      Chat     @relation(fields: [chatId], references: [Id])
   chatId    String
   senderId  String
   message   String
@@ -149,7 +150,7 @@ model room {
   Id             String   @id @default(uuid())
   name           String
   description    String
-  game         Game     @relation(fields: [gameId], references: [Id])
+  game           Game     @relation(fields: [gameId], references: [Id])
   gameId         String
   type           String
   status         String   @default("open")
@@ -160,17 +161,17 @@ model room {
 }
 
 model notification {
-  Id String   @id @default(uuid())
-  user         User     @relation(fields: [userId], references: [id])
-  userId         String
-  type           String
-  entity         String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  Id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  entity    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model colors {
-  Id   String   @id @default(uuid())
+  Id        String   @id @default(uuid())
   name      String
   hex       String
   createdAt DateTime @default(now())
