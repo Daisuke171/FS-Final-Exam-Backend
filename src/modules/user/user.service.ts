@@ -21,9 +21,12 @@ export class UserService {
       throw new BadRequestException('Password is required');
     }
 
-    try {
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+    // 1. Prepare data (hash password)
+    const { password, ...userData } = data; // Destructure password and keep other data
+    const hashedPassword = await bcrypt.hash(password, 10);
 
+    try {
+      // 2. Nickname Generation Logic (Unchanged)
       const lastGuest = await this.prisma.user.findFirst({
         where: { nickname: { startsWith: 'invitado' } },
         orderBy: { createdAt: 'desc' },
@@ -37,22 +40,27 @@ export class UserService {
 
       guestNickname += `-${Math.floor(Math.random() * 1000)}`;
 
-      const defaultLevelId = 1;
-
+      // 3. Create User in Database
       const user = await this.prisma.user.create({
         data: {
-          ...data,
+          // Spread all user data *except* password (which is in userData)
+          ...userData,
           password: hashedPassword,
+
+          // Apply nickname logic
           nickname:
-            data.nickname && data.nickname.trim() !== ''
-              ? data.nickname
+            userData.nickname && userData.nickname.trim() !== ''
+              ? userData.nickname
               : guestNickname,
-          levelId: defaultLevelId,
+
+          // Hardcode the Level ID to 1
+          levelId: 1,
         },
       });
 
-      const { password, ...userData } = user;
-      return userData;
+      // 4. Return user data without password
+      const { password: userPassword, ...userDataResponse } = user;
+      return userDataResponse;
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

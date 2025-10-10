@@ -37,6 +37,8 @@ model User {
   chats         Chat[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  @@map("users")
 }
 
 model Skin {

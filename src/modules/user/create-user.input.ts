@@ -4,8 +4,9 @@ import {
   IsDateString,
   Matches,
   IsOptional,
+  IsInt,
 } from 'class-validator';
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, Int } from '@nestjs/graphql';
 
 @InputType()
 export class CreateUserInput {
@@ -39,5 +40,10 @@ export class CreateUserInput {
 
   @Field()
   @IsDateString()
-  birthday: Date;
+  birthday: string;
+
+  @Field(() => Int)
+  @IsOptional()
+  @IsInt()
+  levelId?: number; // optional, default will be used
 }
