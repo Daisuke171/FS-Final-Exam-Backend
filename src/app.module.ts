@@ -4,6 +4,7 @@ import { ChatGateway } from './modules/chat/chat.gateway';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { LevelModule } from './modules/level/level.module';
+import { RoomModule } from './games/coding-war/room/room.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { LevelModule } from './modules/level/level.module';
       playground: true, // This enables the GraphQL Playground
     }),
     LevelModule,
+    RoomModule,
   ],
   providers: [ChatGateway],
 })
