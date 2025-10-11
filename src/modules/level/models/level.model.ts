@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { User } from 'src/modules/users/models/user.model';
+import { User } from 'src/modules/user/models/user.model';
 
 @ObjectType()
 export class Level {

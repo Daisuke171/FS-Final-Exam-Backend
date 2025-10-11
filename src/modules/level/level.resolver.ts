@@ -1,6 +1,6 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { LevelService } from './level.service';
-import { Level } from './level.model';
+import { Level } from './models/level.model';
 import { CreateLevelInput } from './create-level.input';
 
 @Resolver(() => Level)

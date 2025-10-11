@@ -3,7 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateLevelInput } from './create-level.input';
 import type { Level as PrismaLevel } from '@prisma/client';
 import { Prisma } from '@prisma/client';
@@ -38,7 +38,7 @@ export class LevelService {
 
   // Find one level by Id
   async findOne(id: number): Promise<PrismaLevel> {
-    const level = await this.prisma.level.findUnique({ where: { Id: id } });
+    const level = await this.prisma.level.findUnique({ where: { id } });
     if (!level) {
       throw new NotFoundException(`Level with id ${id} not found`);
     }
@@ -48,7 +48,7 @@ export class LevelService {
   // Optional: delete level
   async delete(id: number): Promise<PrismaLevel> {
     try {
-      return await this.prisma.level.delete({ where: { Id: id } });
+      return await this.prisma.level.delete({ where: { id } });
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
