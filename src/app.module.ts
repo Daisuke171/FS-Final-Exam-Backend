@@ -1,13 +1,23 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { OrdersModule } from './orders/orders.module';
-import { CodingWarModule } from './games/coding-war/coding-war.module';
-import { RpsModule } from './games/rock-paper-scissors/rps.module';
+import { CodingWarModule } from './modules/games/web-sockets/coding-war/coding-war.module';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { RpsModule } from './modules/games/web-sockets/rock-paper-scissors/rps.module';
+import { GamesModule } from './modules/games/games.module';
 
 @Module({
-  imports: [OrdersModule, CodingWarModule, RpsModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: 'schema.gql',
+    }),
+    OrdersModule,
+    CodingWarModule,
+    RpsModule,
+    GamesModule,
+  ],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
