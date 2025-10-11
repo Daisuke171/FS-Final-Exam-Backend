@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: SANYA-CONTAINER
+    restart: always
+    environment:
+      POSTGRES_USER: nicron
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: SANYA-GAMES-DB-DEV
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - '8080:80'
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
