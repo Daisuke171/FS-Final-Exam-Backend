@@ -8,6 +8,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { RpsModule } from './modules/games/web-sockets/rock-paper-scissors/rps.module';
 import { GamesModule } from './modules/games/games.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { GamesModule } from './modules/games/games.module';
     LevelModule,
     UserModule,
     RoomModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [ChatGateway],

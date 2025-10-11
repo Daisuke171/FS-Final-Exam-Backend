@@ -2,6 +2,7 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+<<<<<<< HEAD
 type Level {
   id: ID!
   color: Float!
@@ -9,6 +10,24 @@ type Level {
   name: String!
   experienceRequired: Float!
   users: [User!]!
+=======
+type User {
+  id: String!
+  email: String!
+  username: String!
+  name: String!
+  lastname: String!
+  birthday: DateTime!
+  levelId: Int!
+  nickname: String
+  skins: [String!]!
+  friends: [String!]!
+  gameHistory: [String!]!
+  gameFavorites: [String!]!
+  notifications: [String!]!
+  chats: [String!]!
+  experience: Float!
+>>>>>>> feature/register
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -18,6 +37,7 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+<<<<<<< HEAD
 type User {
   id: ID!
   name: String!
@@ -173,3 +193,32 @@ input UpdateUserInput {
   birthday: DateTime
   levelId: Int = 1
 }
+=======
+type AuthResponse {
+  accessToken: String!
+  user: User!
+}
+
+type Query {
+  healthCheck: Boolean!
+}
+
+type Mutation {
+  register(registerInput: RegisterInput!): User!
+  login(loginInput: LoginInput!): AuthResponse!
+}
+
+input RegisterInput {
+  email: String!
+  username: String!
+  password: String!
+  name: String!
+  lastname: String!
+  birthday: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+>>>>>>> feature/register

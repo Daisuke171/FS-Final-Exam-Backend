@@ -44,6 +44,9 @@ importers:
       '@prisma/client':
         specifier: ^6.16.3
         version: 6.16.3(prisma@6.16.3(typescript@5.9.3))(typescript@5.9.3)
+      '@types/passport-jwt':
+        specifier: ^4.0.1
+        version: 4.0.1
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -79,7 +82,7 @@ importers:
         specifier: ^3.2.0
         version: 3.3.1
       '@eslint/js':
-        specifier: ^9.18.0
+        specifier: ^9.36.0
         version: 9.36.0
       '@nestjs/cli':
         specifier: ^11.0.0
@@ -108,12 +111,6 @@ importers:
       '@types/node':
         specifier: ^22.10.7
         version: 22.18.8
-      '@types/passport-jwt':
-        specifier: ^4.0.1
-        version: 4.0.1
-      '@types/passport-local':
-        specifier: ^1.0.38
-        version: 1.0.38
       '@types/socket.io':
         specifier: ^3.0.2
         version: 3.0.2
@@ -1359,9 +1356,6 @@ packages:
 
   '@types/passport-jwt@4.0.1':
     resolution: {integrity: sha512-Y0Ykz6nWP4jpxgEUYq8NoVZeCQPo1ZndJLfapI249g1jHChvRfZRO/LS3tqu26YgAS/laI1qx98sYGz0IalRXQ==}
-
-  '@types/passport-local@1.0.38':
-    resolution: {integrity: sha512-nsrW4A963lYE7lNTv9cr5WmiUD1ibYJvWrpE13oxApFsRt77b0RdtZvKbCdNIY4v/QZ6TRQWaDDEwV1kCTmcXg==}
 
   '@types/passport-strategy@0.2.38':
     resolution: {integrity: sha512-GC6eMqqojOooq993Tmnmp7AUTbbQSgilyvpCYQjT+H6JfG/g6RGc7nXEniZlp0zyKJ0WUdOiZWLBZft9Yug1uA==}
@@ -5474,12 +5468,6 @@ snapshots:
   '@types/passport-jwt@4.0.1':
     dependencies:
       '@types/jsonwebtoken': 9.0.10
-      '@types/passport-strategy': 0.2.38
-
-  '@types/passport-local@1.0.38':
-    dependencies:
-      '@types/express': 5.0.3
-      '@types/passport': 1.0.17
       '@types/passport-strategy': 0.2.38
 
   '@types/passport-strategy@0.2.38':
