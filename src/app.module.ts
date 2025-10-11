@@ -4,7 +4,7 @@ import { ChatGateway } from './modules/chat/chat.gateway';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { LevelModule } from './modules/level/level.module';
-import { RoomModule } from './games/coding-war/room/room.module';
+import { RoomModule } from './modules/games/coding-war/room/room.module';
 
 @Module({
   imports: [
