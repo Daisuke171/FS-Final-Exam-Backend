@@ -10,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { RpsService } from '../rps.service';
 import { Moves, Game, StartingState, PlayingState } from '../states/rps.states';
+import { GamesService } from 'src/modules/games/games.service';
 
 interface StateProps {
   state: string;
@@ -40,7 +41,10 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private playerRooms: Map<string, string> = new Map();
 
-  constructor(private gameService: RpsService) {}
+  constructor(
+    private gameService: RpsService,
+    private gameApiService: GamesService,
+  ) {}
 
   handleConnection(client: Socket) {
     console.log(`Cliente conectado: ${client.id}`);
@@ -149,7 +153,11 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       password: data.password,
     };
 
-    const game = this.gameService.createGame(roomId, roomConfig);
+    const game = this.gameService.createGame(
+      roomId,
+      roomConfig,
+      this.gameApiService,
+    );
     game.setEmitCallback((event, payload) => {
       this.server.to(roomId).emit(event, payload);
     });

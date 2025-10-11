@@ -27,158 +27,180 @@ model User {
   nickname      String?        @unique @default("guest")
   experience    Int            @default(0)
   coins         Float          @default(0)
-  level         Level          @relation(fields: [levelId], references: [Id])
-  levelId       Int
+  level         Level          @relation(fields: [levelId], references: [id])
+  levelId       Int            @map("level_id")
   skins         UserSkins[]
   friends       Friend[]
   gameHistory   GameHistory[]
   gameFavorites GameFavorite[]
   notifications notification[]
   chats         Chat[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@map("users")
 }
 
 model Skin {
-  Id        String      @id @default(uuid())
+  id        String      @id @default(uuid())
   name      String
   img       String
   level     Int
   value     Float
   users     UserSkins[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  @@map("skins")
 }
 
 model UserSkins {
   id        String   @id @default(uuid())
   user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  skin      Skin     @relation(fields: [skinId], references: [Id])
+  userId    String   @map("user_id")
+  skin      Skin     @relation(fields: [skinId], references: [id])
   skinId    String
   active    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_skins")
 }
 
 model Level {
-  Id                 Int      @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   number             Int
   name               String
   color              String
-  experienceRequired Int
+  experienceRequired Int      @map("experience_required")
   users              User[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("levels")
 }
 
 model Friend {
-  Id        String   @id @default(uuid())
+  id        String   @id @default(uuid())
   status    String   @default("pending")
   user      User     @relation(fields: [userId], references: [id])
-  userId    String
+  userId    String   @map("user_id")
   chat      Chat[]
   active    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("friends")
 }
 
 model Game {
-  Id          String         @id @default(uuid())
+  id          String         @id @default(uuid())
   name        String
   description String
   rules       String
-  gameLogo    String
+  gameLogo    String         @map("game_logo")
   category    String
   score       Int
-  duration    Int
-  maxPlayers  Int
-  minPlayers  Int
+  duration    String         @default("00:00:00")
+  maxPlayers  Int            @map("max_players")
+  minPlayers  Int            @map("min_players")
   history     GameHistory[]
   favorite    GameFavorite[]
   rooms       room[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@map("games")
 }
 
 model GameHistory {
   id          String   @id @default(uuid())
-  game        Game     @relation(fields: [gameId], references: [Id])
-  gameId      String
+  game        Game     @relation(fields: [gameId], references: [id])
+  gameId      String   @map("game_id")
   user        User     @relation(fields: [userId], references: [id])
-  userId      String
+  userId      String   @map("user_id")
   duration    Int
   state       String
   score       Int
-  totalDamage Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  totalDamage Int?     @default(0) @map("total_damage")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("game_history")
 }
 
 model GameFavorite {
   id        String   @id @default(uuid())
-  game      Game     @relation(fields: [gameId], references: [Id])
-  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id])
+  gameId    String   @map("game_id")
   user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("game_favorites")
 }
 
 model Chat {
-  Id        String        @id @default(uuid())
+  id        String        @id @default(uuid())
   user      User          @relation(fields: [userId], references: [id])
-  userId    String
-  friend    Friend        @relation(fields: [friendId], references: [Id])
-  friendId  String
+  userId    String        @map("user_id")
+  friend    Friend        @relation(fields: [friendId], references: [id])
+  friendId  String        @map("friend_id")
   messages  chatMessage[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@map("chats")
 }
 
 model chatMessage {
-  Id        String   @id @default(uuid())
-  chat      Chat     @relation(fields: [chatId], references: [Id])
-  chatId    String
-  senderId  String
+  id        String   @id @default(uuid())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String   @map("chat_id")
+  senderId  String   @map("sender_id")
   message   String
   status    String   @default("sended")
   read      Boolean  @default(false)
   timestamp DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("chat_messages")
 }
 
 model room {
-  Id             String   @id @default(uuid())
+  id             String   @id @default(uuid())
   name           String
   description    String
-  game           Game     @relation(fields: [gameId], references: [Id])
-  gameId         String
+  game           Game     @relation(fields: [gameId], references: [id])
+  gameId         String   @map("game_id")
   type           String
   status         String   @default("open")
-  maxPlayers     Int
-  currentPlayers Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  maxPlayers     Int      @map("max_players")
+  currentPlayers Int      @default(0) @map("current_players")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("rooms")
 }
 
 model notification {
-  Id        String   @id @default(uuid())
+  id        String   @id @default(uuid())
   user      User     @relation(fields: [userId], references: [id])
-  userId    String
+  userId    String   @map("user_id")
   type      String
   entity    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("notifications")
 }
 
 model colors {
-  Id        String   @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
   hex       String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }

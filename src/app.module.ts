@@ -1,25 +1,29 @@
 import { Module } from '@nestjs/common';
+import { RoomModule } from './modules/games/web-sockets/coding-war/room/room.module';
+import { LevelModule } from './modules/level/level.module';
 import { UserModule } from './modules/user/user.module';
 import { ChatGateway } from './modules/chat/chat.gateway';
+import { CodingWarModule } from './modules/games/web-sockets/coding-war/coding-war.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { LevelModule } from './modules/level/level.module';
-import { RoomModule } from './modules/games/coding-war/room/room.module';
-import { RpsModule } from './modules/games/rock-paper-scissors/rps.module';
+import { RpsModule } from './modules/games/web-sockets/rock-paper-scissors/rps.module';
+import { GamesModule } from './modules/games/games.module';
 
 @Module({
   imports: [
-    UserModule,
-    // http://localhost:3010/graphql for playground
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: 'schema.gql', // or true for in-memory schema
-      playground: true, // This enables the GraphQL Playground
+      autoSchemaFile: 'schema.gql',
+      playground: true,
     }),
-    LevelModule,
-    RoomModule,
+    CodingWarModule,
     RpsModule,
+    GamesModule,
+    LevelModule,
+    UserModule,
+    RoomModule,
   ],
+  controllers: [],
   providers: [ChatGateway],
 })
 export class AppModule {}

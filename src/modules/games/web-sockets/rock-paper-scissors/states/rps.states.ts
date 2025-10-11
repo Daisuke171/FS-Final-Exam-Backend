@@ -1,4 +1,5 @@
 import { getRandomMove } from '../utils/getRandomMove';
+import { GamesService } from 'src/modules/games/games.service';
 
 export enum Moves {
   ROCK = 'piedra',
@@ -10,7 +11,7 @@ export abstract class GameState {
   abstract handleJoin(playerId: string, game: Game): void;
   abstract handleMove(playerId: string, move: Moves, game: Game): void;
   abstract handleDisconnect(playerId: string, game: Game): void;
-  abstract onEnter(game: Game): void;
+  abstract onEnter(game: Game);
   onExit?: (game: Game) => void;
 }
 
@@ -52,8 +53,15 @@ export class Game {
   private emitCallback?: (event: string, data: any) => void;
   private onRoomEmpty?: (roomId: string) => void;
   private cleanupTimer?: NodeJS.Timeout;
+  damageDealt: Map<string, number> = new Map();
+  startTime: number = Date.now();
 
-  constructor(roomId: string, roomConfig: RoomConfig, initialState: GameState) {
+  constructor(
+    roomId: string,
+    roomConfig: RoomConfig,
+    initialState: GameState,
+    private gamesApiService: GamesService,
+  ) {
     this.roomId = roomId;
     this.roomConfig = roomConfig;
     this.state = initialState;
@@ -61,8 +69,18 @@ export class Game {
       this.state.onEnter(this);
     }
   }
+
   setOnRoomEmptyCallback(callback: (roomId: string) => void) {
     this.onRoomEmpty = callback;
+  }
+
+  getGamesApiService(): GamesService {
+    return this.gamesApiService;
+  }
+
+  recordDamage(playerId: string, damage: number) {
+    const current = this.damageDealt.get(playerId) || 0;
+    this.damageDealt.set(playerId, current + damage);
   }
 
   private cancelCleanupTimer() {
@@ -353,6 +371,8 @@ export class RevealingState extends GameState {
     if (move1 === move2) {
       damageP1 = 5;
       damageP2 = 5;
+      game.recordDamage(player1, 5);
+      game.recordDamage(player2, 5);
       roundWinner = null;
     } else if (
       (move1 === Moves.ROCK && move2 === Moves.SCISSORS) ||
@@ -360,10 +380,12 @@ export class RevealingState extends GameState {
       (move1 === Moves.SCISSORS && move2 === Moves.PAPER)
     ) {
       damageP2 = 20;
+      game.recordDamage(player2, 20);
       roundWinner = player1;
       console.log('Ganador:', player1, 'con', move1);
     } else {
       damageP1 = 20;
+      game.recordDamage(player1, 20);
       roundWinner = player2;
       console.log('Ganador:', player2, 'con', move2);
     }
@@ -426,7 +448,7 @@ export class RevealingState extends GameState {
 
 export class FinishedState extends GameState {
   name = 'finished';
-  onEnter(game: Game): void {
+  async onEnter(game: Game) {
     const [p1, p2] = Array.from(game.players.keys());
     const hp1 = game.getHP(p1);
     const hp2 = game.getHP(p2);
@@ -446,6 +468,30 @@ export class FinishedState extends GameState {
       player1: { id: p1, move: game.moves.get(p1) || '' },
       player2: { id: p2, move: game.moves.get(p2) || '' },
     };
+    const gamesApiService = game.getGamesApiService();
+    const duration = Math.floor((Date.now() - game.startTime) / 1000);
+
+    try {
+      await gamesApiService.saveGameResult({
+        userId: p1,
+        gameId: '5c13f20e-0eb3-4938-b952-008c074c6f8e',
+        duration,
+        state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
+        score: this.calculateScore(hp1, game.history.length, winner === p1),
+        totalDamage: game.damageDealt.get(p1) || 0,
+      });
+
+      await gamesApiService.saveGameResult({
+        userId: p2,
+        gameId: '5c13f20e-0eb3-4938-b952-008c074c6f8e',
+        duration,
+        state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
+        score: this.calculateScore(hp2, game.history.length, winner === p2),
+        totalDamage: game.damageDealt.get(p2) || 0,
+      });
+    } catch (error) {
+      console.error('Error al guardar el resultado de la partida:', error);
+    }
     game.emit('gameOver', {
       winner,
       finalHealth: {
@@ -454,6 +500,16 @@ export class FinishedState extends GameState {
       },
       totalRounds: game.history.length,
     });
+  }
+
+  private calculateScore(hp: number, rounds: number, won: boolean): number {
+    if (!won && hp <= 0) return 0;
+
+    const baseScore = hp * 10;
+    const roundBonus = Math.max(0, 100 - rounds * 10);
+    const winBonus = won ? 200 : 0;
+
+    return baseScore + roundBonus + winBonus;
   }
   handleJoin() {}
   handleMove() {}
