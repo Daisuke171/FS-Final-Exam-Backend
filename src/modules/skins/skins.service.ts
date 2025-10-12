@@ -9,7 +9,7 @@ import type { Skin as PrismaSkin } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
-export class LevelService {
+export class SkinsService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Create new level
