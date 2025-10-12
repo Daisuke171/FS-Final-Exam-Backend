@@ -38,11 +38,22 @@ export class SkinsService {
 
   // Find one level by Id
   async findOne(id: string): Promise<PrismaSkin> {
-    const level = await this.prisma.skin.findUnique({ where: { id } });
-    if (!level) {
-      throw new NotFoundException(`Level with id ${id} not found`);
+    const skin = await this.prisma.skin.findUnique({
+      where: { id },
+      include: {
+        users: {
+          include: {
+            user: true, // fetches user info for each UserSkin
+          },
+        },
+      },
+    });
+
+    if (!skin) {
+      throw new NotFoundException(`Skin with id ${id} not found`);
     }
-    return level;
+
+    return skin;
   }
 
   // Optional: delete level

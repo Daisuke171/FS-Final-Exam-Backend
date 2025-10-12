@@ -131,6 +131,12 @@ export class UserService {
         coins: true,
         level: true,
         createdAt: true,
+
+        skins: {
+          include: {
+            skin: true, // brings full Skin info
+          },
+        },
       },
     });
 
