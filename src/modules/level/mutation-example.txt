@@ -5,7 +5,7 @@ mutation {
     color: "#00FF00",
     experienceRequired: 0
   }) {
-    Id
+    id
     number
     name
     color

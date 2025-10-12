@@ -9,6 +9,9 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { RpsModule } from './modules/games/web-sockets/rock-paper-scissors/rps.module';
 import { GamesModule } from './modules/games/games.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { SkinsResolver } from './modules/skins/skins.resolver';
+import { SkinsModule } from './modules/skins/skins.module';
+import { SkinsResolver } from './skins/skins.resolver';
 
 @Module({
   imports: [
@@ -24,8 +27,9 @@ import { AuthModule } from './modules/auth/auth.module';
     UserModule,
     RoomModule,
     AuthModule,
+    SkinsModule,
   ],
   controllers: [],
-  providers: [ChatGateway],
+  providers: [ChatGateway, SkinsResolver],
 })
 export class AppModule {}
