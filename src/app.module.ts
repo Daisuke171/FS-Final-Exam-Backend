@@ -11,7 +11,9 @@ import { GamesModule } from './modules/games/games.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SkinsResolver } from './modules/skins/skins.resolver';
 import { SkinsModule } from './modules/skins/skins.module';
-import { SkinsResolver } from './skins/skins.resolver';
+import { UserSkinsService } from './modules/user-skins/user-skins.service';
+import { UserSkinsResolver } from './modules/user-skins/user-skins.resolver';
+import { UserSkinsModule } from './modules/user-skins/user-skins.module';
 
 @Module({
   imports: [
@@ -28,8 +30,9 @@ import { SkinsResolver } from './skins/skins.resolver';
     RoomModule,
     AuthModule,
     SkinsModule,
+    UserSkinsModule,
   ],
   controllers: [],
-  providers: [ChatGateway, SkinsResolver],
+  providers: [ChatGateway, SkinsResolver, UserSkinsService, UserSkinsResolver],
 })
 export class AppModule {}
