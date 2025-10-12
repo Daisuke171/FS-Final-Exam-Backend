@@ -2,16 +2,16 @@ import { WebSocketGateway, WebSocketServer, OnGatewayInit } from '@nestjs/websoc
 import { Server } from 'socket.io';
 import { ObservableService } from '../../common/observable.service';
 
-@WebSocketGateway({ cors: true })
+@WebSocketGateway({ cors: { origin: '*' } })
 export class NotificationGateway implements OnGatewayInit {
-  @WebSocketServer() server: Server;
+  @WebSocketServer() server!: Server;
 
-  constructor(private observable: ObservableService) {}
+  constructor(private readonly bus: ObservableService) {}
 
   afterInit() {
-    this.observable.events$.subscribe(event => {
-      if (event.type === 'notification') {
-        this.server.emit('newNotification', event.payload);
+    this.bus.events$.subscribe((e) => {
+      if (e.type === 'notification') {
+        this.server.emit('newNotification', e.data);
       }
     });
   }

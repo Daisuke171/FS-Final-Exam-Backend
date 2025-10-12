@@ -1,4 +1,157 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { ObservableService } from '../../common/observable.service';
+import { randomBytes, createHash } from 'crypto';
+import { addHours, isBefore } from 'date-fns';
+import type { Friend as PrismaFriend } from '@prisma/client';
+import {
+  RequestFriendByUsernameInput,
+  CreateFriendInviteInput,
+  AcceptFriendInviteInput,
+  UpdateFriendStatusInput,
+  FriendStatus,
+  ToggleFriendActiveInput,
+} from './dto';
 
 @Injectable()
-export class FriendsService {}
+export class FriendsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bus: ObservableService,
+  ) {}
+
+  private hashToken(token: string) {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  async listForUser(userId: string): Promise<PrismaFriend[]> {
+    return this.prisma.friend.findMany({
+      where: { OR: [{ requesterId: userId }, { receiverId: userId }] },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // --- solicitud por username
+  async requestByUsername(input: RequestFriendByUsernameInput): Promise<PrismaFriend> {
+    const receiver = await this.prisma.user.findUnique({ where: { username: input.username } });
+    if (!receiver) throw new NotFoundException('Username no encontrado');
+    if (receiver.id === input.requesterId) throw new BadRequestException('No podés agregarte a vos mismo');
+
+    const existing = await this.prisma.friend.findFirst({
+      where: {
+        OR: [
+          { requesterId: input.requesterId, receiverId: receiver.id },
+          { requesterId: receiver.id,       receiverId: input.requesterId },
+        ],
+      },
+    });
+    if (existing) return existing;
+
+    const friend = await this.prisma.friend.create({
+      data: { requesterId: input.requesterId, receiverId: receiver.id, status: 'PENDING' },
+    });
+
+    this.bus.notify({ type: 'notification', data: { type: 'friend:request', entity: friend.id, userId: receiver.id } });
+    return friend;
+  }
+
+  // --- crear link one-shot
+  async createInvite(input: CreateFriendInviteInput): Promise<string> {
+    const inviter = await this.prisma.user.findUnique({ where: { id: input.inviterId } });
+    if (!inviter) throw new NotFoundException('Inviter no existe');
+
+    let targetUserId: string | undefined;
+    if (input.targetUsername) {
+      const target = await this.prisma.user.findUnique({ where: { username: input.targetUsername } });
+      if (!target) throw new NotFoundException('Username objetivo no existe');
+      if (target.id === inviter.id) throw new BadRequestException('No podés invitarte a vos mismo');
+      targetUserId = target.id;
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    const tokenHash = this.hashToken(token);
+    const expiresAt = addHours(new Date(), input.ttlHours ?? 24);
+
+    await this.prisma.friendInvite.create({
+      data: {
+        inviterId: inviter.id,
+        tokenHash,
+        targetUserId,
+        expiresAt,
+      },
+    });
+
+    // ajustar dominio/URL según tu front
+    return `${process.env.URL_FRONTEND}/invite/friend?token=${token}`;
+  }
+
+  // --- aceptar link (consumir)
+  async acceptInvite(input: AcceptFriendInviteInput): Promise<PrismaFriend> {
+    const receiver = await this.prisma.user.findUnique({ where: { id: input.receiverId } });
+    if (!receiver) throw new NotFoundException('Receiver no existe');
+
+    const tokenHash = this.hashToken(input.token);
+    const invite = await this.prisma.friendInvite.findUnique({ where: { tokenHash } });
+    if (!invite) throw new NotFoundException('Invitación inválida');
+    if (invite.usedAt) throw new BadRequestException('Invitación ya usada');
+    if (isBefore(invite.expiresAt, new Date())) throw new BadRequestException('Invitación expirada');
+    if (invite.targetUserId && invite.targetUserId !== receiver.id) throw new ForbiddenException('Invitación no destinada a este usuario');
+
+    const existing = await this.prisma.friend.findFirst({
+      where: {
+        OR: [
+          { requesterId: invite.inviterId, receiverId: receiver.id },
+          { requesterId: receiver.id,       receiverId: invite.inviterId },
+        ],
+      },
+    });
+
+    return await this.prisma.$transaction(async (tx) => {
+      await tx.friendInvite.update({
+        where: { tokenHash },
+        data: { usedAt: new Date(), usedById: receiver.id },
+      });
+
+      if (existing) return existing;
+
+      const friend = await tx.friend.create({
+        data: {
+          requesterId: invite.inviterId,
+          receiverId: receiver.id,
+          status: 'ACCEPTED', // por link aceptamos directo
+          active: true,
+        },
+      });
+
+      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: friend.id, userId: invite.inviterId } });
+      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: friend.id, userId: receiver.id } });
+
+      return friend;
+    });
+  }
+
+  // --- otros helpers
+  async updateStatus(input: UpdateFriendStatusInput): Promise<PrismaFriend> {
+    const next = await this.prisma.friend.update({
+      where: { id: input.id },
+      data: { status: input.status },
+    });
+    this.bus.notify({ type: 'notification', data: { type: 'friend:status', entity: next.id, status: next.status, userId: next.receiverId } });
+    return next;
+  }
+
+  async toggleActive(input: ToggleFriendActiveInput): Promise<PrismaFriend> {
+    const next = await this.prisma.friend.update({
+      where: { id: input.id },
+      data: { active: input.active },
+    });
+    this.bus.notify({ type: 'notification', data: { type: 'friend:active', entity: next.id, active: next.active, userId: next.receiverId } });
+    return next;
+  }
+
+  async remove(id: string): Promise<boolean> {
+    await this.prisma.friend.delete({ where: { id } });
+    this.bus.notify({ type: 'notification', data: { type: 'friend:removed', entity: id } });
+    return true;
+  }
+}

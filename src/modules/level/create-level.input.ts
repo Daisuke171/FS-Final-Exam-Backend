@@ -5,17 +5,17 @@ import { IsString, IsInt, Min } from 'class-validator';
 export class CreateLevelInput {
   @Field(() => Int)
   @IsInt()
-  number: number;
+  number!: number;
 
   @Field()
   @IsString()
-  name: string;
+  name!: string;
 
   @Field()
   @IsString()
-  color: string;
+  color!: string;
 
   @Field(() => Int)
   @Min(0)
-  experienceRequired: number;
+  experienceRequired!: number;
 }

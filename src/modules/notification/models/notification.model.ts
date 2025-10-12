@@ -1,20 +1,19 @@
 import { ObjectType, Field, ID, GraphQLISODateTime } from '@nestjs/graphql';
-import { ChatMessage } from './chat-message.model';
 import { User } from '../../user/user.model';
 
 @ObjectType()
-export class Chat {
+export class Notification {
   @Field(() => ID)
   id!: string;
 
-  @Field(() => User)
-  userId!: User;
+  @Field()
+  type!: string;
+
+  @Field()
+  entity!: string;
 
   @Field(() => User)
-  friendId!: User;
-
-  @Field(() => [ChatMessage])
-  messages!: ChatMessage[];
+  user!: User;
 
   @Field(() => GraphQLISODateTime)
   createdAt!: Date;
@@ -22,4 +21,3 @@ export class Chat {
   @Field(() => GraphQLISODateTime)
   updatedAt!: Date;
 }
-

@@ -12,19 +12,19 @@ import { InputType, Field, Int } from '@nestjs/graphql';
 export class CreateUserInput {
   @Field()
   @IsString()
-  name: string;
+  name!: string;
 
   @Field()
   @IsString()
-  lastname: string;
+  lastname!: string;
 
   @Field()
   @IsString()
-  username: string;
+  username!: string;
 
   @Field()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -36,11 +36,11 @@ export class CreateUserInput {
     message:
       'La contraseña debe contener mínimo 6 caracteres, una letra mayúscula, y un símbolo',
   })
-  password: string;
+  password!: string;
 
   @Field()
   @IsDateString()
-  birthday: string;
+  birthday!: string;
 
   @Field(() => Int)
   @IsOptional()

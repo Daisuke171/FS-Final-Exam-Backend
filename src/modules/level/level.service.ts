@@ -36,9 +36,9 @@ export class LevelService {
     });
   }
 
-  // Find one level by Id
+  // Find one level by id
   async findOne(id: number): Promise<PrismaLevel> {
-    const level = await this.prisma.level.findUnique({ where: { Id: id } });
+    const level = await this.prisma.level.findUnique({ where: { id: id } });
     if (!level) {
       throw new NotFoundException(`Level with id ${id} not found`);
     }
@@ -48,7 +48,7 @@ export class LevelService {
   // Optional: delete level
   async delete(id: number): Promise<PrismaLevel> {
     try {
-      return await this.prisma.level.delete({ where: { Id: id } });
+      return await this.prisma.level.delete({ where: { id: id } });
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

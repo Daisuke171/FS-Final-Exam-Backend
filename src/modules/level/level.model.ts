@@ -3,23 +3,23 @@ import { ObjectType, Field, Int, ID } from '@nestjs/graphql';
 @ObjectType()
 export class Level {
   @Field(() => ID)
-  Id: number;
+  id!: number;
 
   @Field(() => Int)
-  number: number;
+  number!: number;
 
   @Field()
-  name: string;
+  name!: string;
 
   @Field()
-  color: string;
+  color!: string;
 
   @Field(() => Int)
-  experienceRequired: number;
+  experienceRequired!: number;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

@@ -17,7 +17,7 @@ import { RoomService } from './room.service';
 })
 export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   constructor(private readonly roomService: RoomService) {}
 

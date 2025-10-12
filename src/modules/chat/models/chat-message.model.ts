@@ -1,25 +1,26 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, GraphQLISODateTime } from '@nestjs/graphql';
+
 
 @ObjectType()
 export class ChatMessage {
   @Field(() => ID)
-  Id: string;
+  id!: string;
 
   @Field()
-  chatId: string;
+  chatId!: string;
 
   @Field()
-  senderId: string;
+  senderId!: string;
 
   @Field()
-  message: string;
+  message!: string;
 
   @Field()
-  status: string;
+  status!: string;
 
   @Field()
-  read: boolean;
+  read!: boolean;
 
-  @Field()
-  timestamp: Date;
+  @Field(() => GraphQLISODateTime)
+  timestamp!: Date;
 }

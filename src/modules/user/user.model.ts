@@ -3,29 +3,29 @@ import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 @ObjectType()
 export class User {
   @Field(() => ID)
-  id: string;
+  id!: string;
 
   @Field()
-  email: string;
+  email!: string;
 
   @Field()
-  name: string;
+  name!: string;
 
   @Field()
-  lastname: string;
+  lastname!: string;
 
   @Field()
-  nickname: string;
+  nickname!: string;
 
   @Field()
-  username: string;
+  username!: string;
 
   @Field()
-  birthday: Date;
+  birthday!: Date;
 
   @Field(() => Int)
-  levelId: number;
+  levelId!: number;
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 }

@@ -1,38 +1,52 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ObservableService } from '../../common/observable.service';
+import type { Notification as PrismaNotification } from '@prisma/client';
+import { CreateNotificationInput } from './dto/create-notificacion.input';
+
+type NotificationBusPayload = {
+  id: string;
+  type: string;
+  entity: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 @Injectable()
-export class NotificationService implements OnModuleInit {
+export class NotificationService {
   constructor(
-    private prisma: PrismaService,
-    private observable: ObservableService,
+    private readonly prisma: PrismaService,
+    private readonly observable: ObservableService,
   ) {}
 
-  onModuleInit() {
-    // Se suscribe a los eventos del chat
-    this.observable.events$.subscribe(async (event) => {
-      if (event.type === 'chatMessage') {
-        const { chat } = event.payload;
+  async create(input: CreateNotificationInput): Promise<PrismaNotification> {
+    const notification = await this.prisma.notification.create({
+      data: {
+        type: input.type,
+        entity: input.entity,
+        userId: input.userId,
+      },
+    });
 
-        // Crear notificación para el receptor del mensaje
-        await this.prisma.notifications.create({
-          data: {
-            userId: chat.friend.userId,
-            type: 'message',
-            entity: chat.Id,
-          },
-        });
+    // broadcast (NotificationGateway re-emite por socket)
+    const payload: NotificationBusPayload = {
+      id: notification.id,
+      type: notification.type,
+      entity: notification.entity,
+      userId: notification.userId,
+      createdAt: notification.createdAt,
+      updatedAt: notification.updatedAt,
+    };
 
-        // Emitir evento de notificación
-        this.observable.notify({
-          type: 'notification',
-          payload: {
-            userId: chat.friend.userId,
-            message: 'Nuevo mensaje recibido',
-          },
-        });
-      }
+    this.observable.notify({ type: 'notification', data: payload });
+    return notification;
+  }
+
+  async byUser(userId: string): Promise<PrismaNotification[]> {
+    return this.prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

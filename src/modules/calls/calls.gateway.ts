@@ -4,12 +4,13 @@ import { ObservableService } from '../../common/observable.service';
 
 @WebSocketGateway({ cors: true })
 export class CallGateway {
-  @WebSocketServer() server: Server;
+  @WebSocketServer() 
+  server!: Server;
 
   constructor(private observable: ObservableService) {
     this.observable.events$.subscribe(event => {
       if (event.type === 'call') {
-        this.server.emit('callEvent', event.payload);
+        this.server.emit('callEvent', event.data);
       }
     });
   }
