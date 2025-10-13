@@ -4,7 +4,8 @@ import { UserModule } from './modules/user/user.module';
 import { ChatGateway } from './modules/chat/chat.gateway';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { RpsModule } from './modules/games/web-sockets/rock-paper-scissors/rps.module';
+import { RpsModule as RpsModuleRPS } from './modules/games/web-sockets/rock-paper-scissors/rps.module';
+import { RpsModule as CodingWarModule } from './modules/games/web-sockets/coding-war/coding-war.module';
 import { GamesModule } from './modules/games/games.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SkinsModule } from './modules/skins/skins.module';
@@ -17,7 +18,8 @@ import { UserSkinModule } from './modules/user-skins/user-skins.module';
       autoSchemaFile: 'schema.gql',
       playground: true,
     }),
-    RpsModule,
+    RpsModuleRPS,
+    CodingWarModule,
     GamesModule,
     LevelModule,
     UserModule,

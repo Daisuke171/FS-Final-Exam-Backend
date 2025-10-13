@@ -1,14 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { Game, RoomConfig } from './states/test.states';
+import { Game, RoomConfig, WaitingState } from './states/coding-war.states';
+import { GamesService } from '../../games.service';
 
 @Injectable()
-export class TestService {
+export class CWService {
   private games: Map<string, Game> = new Map();
 
-  createGame(roomId: string, roomConfig: RoomConfig): Game {
-    const game = new Game(roomId, roomConfig);
+  createGame(
+    roomId: string,
+    roomConfig: RoomConfig,
+    gamesApiService: GamesService,
+  ): Game {
+    const game = new Game(
+      roomId,
+      roomConfig,
+      new WaitingState(),
+      gamesApiService,
+    );
     this.games.set(roomId, game);
-    console.log(`Test game creado en sala: ${roomId}`);
+    console.log(`Juego creado en sala: ${roomId}`);
     return game;
   }
 

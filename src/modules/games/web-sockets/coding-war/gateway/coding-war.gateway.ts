@@ -8,15 +8,17 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { TestService } from '../test.service';
-import { Game } from '../states/test.states';
+import { CWService } from '../coding-war.service';
+import { Game, StartingState, PlayingState } from '../states/coding-war.states';
+import { GamesService } from 'src/modules/games/games.service';
 
 interface StateProps {
   state: string;
   players: string[];
-  spectators: string[];
-  readyPlayers: string[];
   playerCount: number;
+  result?: unknown;
+  history?: unknown;
+  ready: Record<string, boolean>;
   roomInfo: {
     id: string;
     name: string;
@@ -27,17 +29,21 @@ interface StateProps {
 }
 
 @WebSocketGateway({
+  namespace: '/coding-war',
   cors: {
     origin: '*',
   },
 })
-export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   private playerRooms: Map<string, string> = new Map();
 
-  constructor(private gameService: TestService) {}
+  constructor(
+    private gameService: CWService,
+    private gameApiService: GamesService,
+  ) {}
 
   handleConnection(client: Socket) {
     console.log(`Cliente conectado: ${client.id}`);
@@ -51,6 +57,7 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const game = this.gameService.getGame(roomId);
       if (game) {
         game.disconnect(client.id);
+        game.clearReady(client.id);
         if (game.players.size > 0) {
           this.emitGameState(roomId, game);
         }
@@ -59,7 +66,75 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // Placeholder game has no ready/match flow
+  @SubscribeMessage('playerReadyForMatch')
+  handlePlayerReadyForMatch(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+
+      if (!game) {
+        console.error(
+          `[playerReadyForMatch] Juego no encontrado: ${data.roomId}`,
+        );
+        client.emit('error', { message: 'Juego no encontrado' });
+        return;
+      }
+
+      if (!game.players.has(client.id)) {
+        console.error(
+          `[playerReadyForMatch] Jugador ${client.id} no está en el juego`,
+        );
+        client.emit('error', { message: 'No estás en este juego' });
+        return;
+      }
+
+      const currentState = game.getCurrentState();
+      console.log(`[playerReadyForMatch] Estado actual: ${currentState}`);
+
+      if (currentState !== 'PlayingState') {
+        console.warn(
+          `[playerReadyForMatch] Estado incorrecto: ${currentState}`,
+        );
+        return;
+      }
+
+      const playingState = game['state'] as PlayingState;
+      if (
+        playingState &&
+        typeof playingState.handlePlayerReady === 'function'
+      ) {
+        playingState.handlePlayerReady(client.id, game);
+      }
+    } catch (error) {
+      console.error('[playerReadyForMatch] Error:', error);
+      client.emit('error', { message: 'Error al procesar ready' });
+    }
+  }
+
+  @SubscribeMessage('confirmReady')
+  handleConfirmReady(
+    @MessageBody() data: { roomId: string; ready?: boolean },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const roomId = data.roomId;
+    const game = this.gameService.getGame(roomId);
+    if (!game) {
+      client.emit('error', 'Juego no encontrado');
+      return;
+    }
+
+    const isReady = data.ready ?? true;
+    game.setReady(client.id, isReady);
+
+    this.emitGameState(roomId, game);
+
+    if (game.isAllReady() && game.players.size === 2) {
+      game.setState(new StartingState());
+      this.emitGameState(roomId, game);
+    }
+  }
 
   @SubscribeMessage('createRoom')
   handleCreateRoom(
@@ -67,7 +142,7 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomName: string; isPrivate: boolean; password?: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const roomId = `test_room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const roomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
     const roomConfig = {
       name: data.roomName,
@@ -75,7 +150,11 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
       password: data.password,
     };
 
-    const game = this.gameService.createGame(roomId, roomConfig);
+    const game = this.gameService.createGame(
+      roomId,
+      roomConfig,
+      this.gameApiService,
+    );
     game.setEmitCallback((event, payload) => {
       this.server.to(roomId).emit(event, payload);
     });
@@ -100,10 +179,6 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
       },
     });
 
-    this.server
-      .to(client.id)
-      .emit('joinRoomSuccess', { roomId, role: 'player' });
-
     this.emitGameState(roomId, game);
   }
 
@@ -117,20 +192,28 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!game) {
       client.emit('joinRoomError', {
-        message: 'La sala no existe o ya finaliz\u00f3',
+        message: 'La sala no existe o ya finalizó',
       });
       return;
     }
 
     if (game.players.has(client.id)) {
-      console.log(
-        `Cliente ${client.id} ya est\u00e1 en la sala ${data.roomId}`,
-      );
+      console.log(`Cliente ${client.id} ya está en la sala ${data.roomId}`);
       this.emitGameState(data.roomId, game);
       return;
     }
-    // allow spectators beyond two players
-    // No state restriction in placeholder game
+    if (game.players.size >= 2) {
+      client.emit('joinRoomError', {
+        message: 'La sala está llena',
+      });
+      return;
+    }
+    if (game.getCurrentState() !== 'WaitingState') {
+      client.emit('joinRoomError', {
+        message: 'La partida ya comenzó',
+      });
+      return;
+    }
 
     if (game.roomConfig.isPrivate) {
       if (!data.password) {
@@ -142,7 +225,7 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       if (game.roomConfig.password !== data.password) {
         client.emit('joinRoomError', {
-          message: 'Contrase\u00f1a incorrecta',
+          message: 'Contraseña incorrecta',
         });
         return;
       }
@@ -153,17 +236,14 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
     game.setOnRoomEmptyCallback((emptyRoomId) => {
       this.gameService.deleteGame(emptyRoomId);
     });
-    const role = game.join(client.id);
-    this.server
-      .to(client.id)
-      .emit('joinRoomSuccess', { roomId: data.roomId, role });
+    this.server.to(client.id).emit('joinRoomSuccess', { roomId: data.roomId });
+    game.join(client.id);
     void client.join(data.roomId);
     this.playerRooms.set(client.id, data.roomId);
     this.emitGameState(data.roomId, game);
     console.log(this.emitGameState(data.roomId, game));
   }
 
-  // No moves in placeholder
   @SubscribeMessage('getPublicRooms')
   handleGetPublicRooms(@ConnectedSocket() client: Socket) {
     const publicRooms = this.gameService.getPublicRooms();
@@ -197,7 +277,7 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
         void client.join(data.roomId);
         this.playerRooms.set(client.id, data.roomId);
       } else {
-        client.emit('error', 'No est\u00e1s en esta sala');
+        client.emit('error', 'No estás en esta sala');
         return;
       }
     }
@@ -207,12 +287,12 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private buildStateData(game: Game): StateProps {
-    return {
+    const stateData: StateProps = {
       state: game.getCurrentState(),
       players: Array.from(game.players.keys()),
-      spectators: Array.from(game.spectators.values()),
-      readyPlayers: Array.from(game.readyPlayers.values()),
       playerCount: game.players.size,
+      history: game.history,
+      ready: Object.fromEntries(game.ready.entries()),
       roomInfo: {
         id: game.roomId,
         name: game.roomConfig.name,
@@ -221,23 +301,14 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
         isPrivate: game.roomConfig.isPrivate,
       },
     };
+    if (game.result) {
+      stateData.result = game.result;
+    }
+    return stateData;
   }
 
   private emitGameState(roomId: string, game: Game) {
     const stateData = this.buildStateData(game);
     this.server.to(roomId).emit('gameState', stateData);
-  }
-
-  @SubscribeMessage('test:confirmReady')
-  handleConfirmReady(
-    @MessageBody() data: { roomId: string; ready: boolean },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const { roomId, ready } = data;
-    const game = this.gameService.getGame(roomId);
-    if (!game) return;
-    if (!game.players.has(client.id)) return; // ignore spectators
-    game.confirmReady(client.id, ready);
-    this.emitGameState(roomId, game);
   }
 }
