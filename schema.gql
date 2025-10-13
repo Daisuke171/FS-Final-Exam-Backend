@@ -101,6 +101,27 @@ type AuthResponse {
   user: User!
 }
 
+type Skin {
+  id: ID!
+  name: String!
+  img: String!
+  level: Int!
+  value: Float!
+  users: [User]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type UserSkin {
+  id: ID!
+  userId: String!
+  skinId: String!
+  equipped: Boolean!
+  acquiredAt: DateTime!
+  user: User
+  skin: Skin
+}
+
 type Query {
   games: [Game!]!
   game(id: Int!): Game!
@@ -111,6 +132,9 @@ type Query {
   levels: [Level!]!
   level(id: Int!): Level!
   users: [User!]!
+  skins: [Skin!]!
+  skin(id: ID!): Skin!
+  userSkins: [UserSkin!]!
 }
 
 type Mutation {
@@ -125,6 +149,9 @@ type Mutation {
   deleteUser(id: ID!): User!
   register(registerInput: RegisterInput!): User!
   login(loginInput: LoginInput!): AuthResponse!
+  createSkin(data: CreateSkinInput!): Skin!
+  deleteSkin(id: ID!): Skin!
+  assignSkin(data: CreateUserSkinInput!): UserSkin!
 }
 
 input ToggleFavoriteInput {
@@ -195,4 +222,18 @@ input RegisterInput {
 input LoginInput {
   email: String!
   password: String!
+}
+
+input CreateSkinInput {
+  name: String!
+  img: String!
+  level: Int!
+  value: Float!
+  userIds: [String!]
+}
+
+input CreateUserSkinInput {
+  userId: String!
+  skinId: String!
+  equipped: Boolean
 }
