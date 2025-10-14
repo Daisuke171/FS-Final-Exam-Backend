@@ -30,6 +30,7 @@ export class UserService {
           data.nickname && data.nickname.trim() !== ''
             ? data.nickname
             : guestNickname,
+        birthday: new Date(data.birthday),
       },
     });
 

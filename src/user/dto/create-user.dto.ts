@@ -24,5 +24,5 @@ export class CreateUserDto {
   password: string;
 
   @IsDateString()
-  birthday: Date;
+  birthday: string;
 }
