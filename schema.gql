@@ -96,6 +96,19 @@ type Leaderboard {
   generatedAt: DateTime!
 }
 
+type UserStats {
+  winRate: Float!
+  totalTime: String!
+  highScore: Int!
+  bestStreak: Int!
+  avgPerDay: Float!
+  totalGames: Int!
+  totalWins: Int!
+  totalLosses: Int!
+  totalDraws: Int!
+  averageScore: Int!
+}
+
 type AuthResponse {
   accessToken: String!
   user: User!
@@ -128,6 +141,7 @@ type Query {
   userGames(userId: Int!, gameId: Int!): [GameHistory!]!
   leaderboard(gameId: Int!): Leaderboard!
   globalLeaderboard: Leaderboard!
+  userStats(userId: Int!, gameId: Int!): UserStats!
   userFavorites(userId: Int!): [GameFavorite!]!
   levels: [Level!]!
   level(id: Int!): Level!
@@ -213,6 +227,7 @@ input CreateUserInput {
 input RegisterInput {
   email: String!
   username: String!
+  nickname: String!
   password: String!
   name: String!
   lastname: String!
