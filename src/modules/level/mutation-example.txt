@@ -1,0 +1,16 @@
+mutation {
+  createLevel(data: {
+    number: 1,
+    name: "Beginner",
+    color: "#00FF00",
+    experienceRequired: 0
+  }) {
+    id
+    number
+    name
+    color
+    experienceRequired
+    createdAt
+    updatedAt
+  }
+}
