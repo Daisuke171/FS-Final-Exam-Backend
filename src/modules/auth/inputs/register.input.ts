@@ -22,6 +22,12 @@ export class RegisterInput {
   @Field()
   @IsString()
   @MinLength(6)
+  @MaxLength(10)
+  nickname: string;
+
+  @Field()
+  @IsString()
+  @MinLength(6)
   @MaxLength(16)
   password: string;
 
