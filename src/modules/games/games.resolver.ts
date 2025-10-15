@@ -8,6 +8,7 @@ import { ToggleFavoriteInput } from './inputs/togle-favorite.input';
 import { GameFavorite } from './models/game-favorite.model';
 import { Leaderboard } from './models/leaderboard.model';
 import { GameHistory } from './models/game-history.model';
+import { UserStats } from './models/user-stats.model';
 
 @Resolver(() => Game)
 export class GamesResolver {
@@ -39,6 +40,14 @@ export class GamesResolver {
   @Query(() => Leaderboard, { name: 'globalLeaderboard' })
   async getGlobalLeaderboard() {
     return this.gamesService.getGlobalLeaderboard();
+  }
+
+  @Query(() => UserStats, { name: 'userStats' })
+  async getUserStats(
+    @Args('userId', { type: () => Int }) userId: string,
+    @Args('gameId', { type: () => Int }) gameId?: string,
+  ) {
+    return this.gamesService.getUserStats(userId, gameId);
   }
 
   @Query(() => [GameFavorite], { name: 'userFavorites' })
