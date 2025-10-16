@@ -14,3 +14,32 @@ mutation {
     updatedAt
   }
 }
+
+
+mutation CreateManyLevels {
+    createManyLevels(data: [
+      {
+        atomicNumber: 1,
+        name: "Hydrogen",
+        chemicalSymbol: "H",
+        color: "#E0FFFF",
+        experienceRequired: 150
+      },
+      {
+        atomicNumber: 2,
+        name: "Helium",
+        chemicalSymbol: "He",
+        color: "#FFD700",
+        experienceRequired: 300
+      },
+      {
+        atomicNumber: 3,
+        name: "Lithium",
+        chemicalSymbol: "Li",
+        color: "#FF69B4",
+        experienceRequired: 450
+      }
+    ]) {
+        count
+    }
+}

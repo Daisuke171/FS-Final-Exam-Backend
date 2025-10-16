@@ -3,10 +3,10 @@ import { InputType, Field } from '@nestjs/graphql';
 @InputType()
 export class CreateUserSkinInput {
   @Field()
-  userId: string;
+  userId!: string;
 
   @Field()
-  skinId: string;
+  skinId!: string;
 
   @Field({ nullable: true })
   equipped?: boolean;

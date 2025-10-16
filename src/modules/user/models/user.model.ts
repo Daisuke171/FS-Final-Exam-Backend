@@ -30,7 +30,7 @@ export class User {
   @Field(() => String, { nullable: true })
   nickname: string | null;
 
-  // ¡¡Se esta usando string porque todavía no están los modelos!!
+  // ¡¡Se esta usando string porque todavía no están los modelos
   @Field(() => [String])
   skins: string[];
 

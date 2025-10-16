@@ -1,5 +1,5 @@
 import { getRandomMove } from '../utils/getRandomMove';
-import { GamesService } from 'src/modules/games/games.service';
+import { GamesService } from '@modules/games/games.service';
 
 export enum Moves {
   ROCK = 'piedra',

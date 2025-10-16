@@ -10,7 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { RpsService } from '../rps.service';
 import { Moves, Game, StartingState, PlayingState } from '../states/rps.states';
-import { GamesService } from 'src/modules/games/games.service';
+import { GamesService } from '@modules/games/games.service';
 
 interface StateProps {
   state: string;

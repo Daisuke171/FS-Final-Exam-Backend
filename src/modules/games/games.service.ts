@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { CreateGameInput } from './inputs/create-game.input';
 import { UpdateGameInput } from './inputs/update-game.input';
 import { SaveGameResultInput } from './inputs/save-game.input';

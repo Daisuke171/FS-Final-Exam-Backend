@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
-import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaModule } from 'prisma/prisma.module';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
 import { AuthResolver } from './auth.resolver';
 import { AuthService } from './auth.service';
