@@ -167,7 +167,7 @@ export class GamesService {
             lastname: true,
             level: {
               select: {
-                number: true,
+                atomicNumber: true,
               },
             },
           },
@@ -187,7 +187,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
-          level: user?.level.number,
+          level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };
       }),
@@ -231,7 +231,7 @@ export class GamesService {
             lastname: true,
             level: {
               select: {
-                number: true,
+                atomicNumber: true,
               },
             },
           },
@@ -251,7 +251,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
-          level: user?.level.number,
+          level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };
       }),
