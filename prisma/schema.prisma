@@ -44,19 +44,19 @@ model Skin {
   level     Int
   value     Float
   users     UserSkin[]
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
 
   @@map("skins")
 }
 
 model UserSkin {
   id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  skinId    String   @map("skin_id")
-  active    Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id])
+  userId    String   @map("user_id")
   skin      Skin     @relation(fields: [skinId], references: [id])
+  skinId    String
+  active    Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -65,9 +65,10 @@ model UserSkin {
 
 model Level {
   id                 Int      @id @default(autoincrement())
-  number             Int
+  atomicNumber       Int    @map("atomic_number")
   name               String
   color              String
+  chemicalSymbol     String   @map("chemical_symbol")
   experienceRequired Int      @map("experience_required")
   users              User[]
   createdAt          DateTime @default(now()) @map("created_at")
@@ -133,11 +134,11 @@ model Game {
   gameLogo    String         @map("game_logo")
   category    String
   score       Int
-  duration    Int
+  duration    String         @default("00:00:00")
   maxPlayers  Int            @map("max_players")
   minPlayers  Int            @map("min_players")
-  histories   GameHistory[]
-  favorites   GameFavorite[]
+  history     GameHistory[]
+  favorite    GameFavorite[]
   rooms       Room[]
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
@@ -147,14 +148,14 @@ model Game {
 
 model GameHistory {
   id          String   @id @default(uuid())
+  game        Game     @relation(fields: [gameId], references: [id])
   gameId      String   @map("game_id")
+  user        User     @relation(fields: [userId], references: [id])
   userId      String   @map("user_id")
   duration    Int
   state       String
   score       Int
-  totalDamage Int      @map("total_damage")
-  game        Game     @relation(fields: [gameId], references: [id])
-  user        User     @relation(fields: [userId], references: [id])
+  totalDamage Int?     @default(0) @map("total_damage")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -163,10 +164,10 @@ model GameHistory {
 
 model GameFavorite {
   id        String   @id @default(uuid())
-  gameId    String   @map("game_id")
-  userId    String   @map("user_id")
   game      Game     @relation(fields: [gameId], references: [id])
+  gameId    String   @map("game_id")
   user      User     @relation(fields: [userId], references: [id])
+  userId    String   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -205,12 +206,12 @@ model Room {
   id             String   @id @default(uuid())
   name           String
   description    String
+  game           Game     @relation(fields: [gameId], references: [id])
   gameId         String   @map("game_id")
   type           String
   status         String   @default("open")
   maxPlayers     Int      @map("max_players")
   currentPlayers Int      @default(0) @map("current_players")
-  game           Game     @relation(fields: [gameId], references: [id])
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
-import { ObservableService } from '../../common/observable.service';
+import { ObservableService } from '@common/observable.service';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ChatGateway

@@ -1,6 +1,6 @@
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { ObservableService } from '../../common/observable.service';
+import { ObservableService } from '@common/observable.service';
 
 @WebSocketGateway({ cors: true })
 export class CallGateway {

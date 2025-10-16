@@ -10,7 +10,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class LevelService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // Create new level
   async create(data: CreateLevelInput): Promise<PrismaLevel> {
@@ -29,16 +29,37 @@ export class LevelService {
     }
   }
 
+  // Create many levels
+  async createMany(data: CreateLevelInput[]): Promise<number> {
+    try {
+      const result = await this.prisma.level.createMany({
+        data,
+        skipDuplicates: true, // opcional
+      });
+      return result.count;
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Level with this number or name already exists',
+        );
+      }
+      throw error;
+    }
+  }
+
   // Find all levels
   async findAll(): Promise<PrismaLevel[]> {
     return this.prisma.level.findMany({
-      orderBy: { number: 'asc' },
+      orderBy: { atomicNumber: 'asc' },
     });
   }
 
   // Find one level by id
   async findOne(id: number): Promise<PrismaLevel> {
-    const level = await this.prisma.level.findUnique({ where: { id: id } });
+    const level = await this.prisma.level.findUnique({ where: { id } });
     if (!level) {
       throw new NotFoundException(`Level with id ${id} not found`);
     }
@@ -48,7 +69,7 @@ export class LevelService {
   // Optional: delete level
   async delete(id: number): Promise<PrismaLevel> {
     try {
-      return await this.prisma.level.delete({ where: { id: id } });
+      return await this.prisma.level.delete({ where: { id } });
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

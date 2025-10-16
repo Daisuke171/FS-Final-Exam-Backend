@@ -1,6 +1,6 @@
 import { ObjectType, Field, ID, GraphQLISODateTime } from '@nestjs/graphql';
 import { ChatMessage } from './chat-message.model';
-import { User } from '../../user/user.model';
+import { User } from '@modules/user/models/user.model';
 
 @ObjectType()
 export class Chat {

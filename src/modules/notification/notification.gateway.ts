@@ -1,6 +1,6 @@
 import { WebSocketGateway, WebSocketServer, OnGatewayInit } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { ObservableService } from '../../common/observable.service';
+import { ObservableService } from '@common/observable.service';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class NotificationGateway implements OnGatewayInit {

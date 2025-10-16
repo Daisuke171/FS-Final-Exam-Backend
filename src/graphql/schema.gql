@@ -7,6 +7,11 @@ input AcceptFriendInviteInput {
   token: String!
 }
 
+type AuthResponse {
+  accessToken: String!
+  user: User!
+}
+
 type ChatMessage {
   chatId: String!
   id: ID!
@@ -23,11 +28,36 @@ input CreateFriendInviteInput {
   ttlHours: Int! = 24
 }
 
+input CreateGameInput {
+  category: String!
+  description: String!
+  duration: String!
+  gameLogo: String!
+  maxPlayers: Int!
+  minPlayers: Int!
+  name: String!
+  rules: String!
+  score: Int!
+}
+
 input CreateLevelInput {
+  atomicNumber: Int!
+  chemicalSymbol: String!
   color: String!
   experienceRequired: Int!
   name: String!
-  number: Int!
+}
+
+type CreateManyResult {
+  count: Int!
+}
+
+input CreateSkinInput {
+  img: String!
+  level: Int!
+  name: String!
+  userIds: [String!]
+  value: Float!
 }
 
 input CreateUserInput {
@@ -39,6 +69,12 @@ input CreateUserInput {
   nickname: String
   password: String!
   username: String!
+}
+
+input CreateUserSkinInput {
+  equipped: Boolean
+  skinId: String!
+  userId: String!
 }
 
 """
@@ -65,42 +101,144 @@ enum FriendStatus {
   PENDING
 }
 
+type Game {
+  category: String!
+  createdAt: DateTime!
+  description: String
+  duration: String!
+  favorite: [GameFavorite]!
+  gameLogo: String
+  history: [GameHistory]!
+  id: ID!
+  maxPlayers: Int!
+  minPlayers: Int!
+  name: String!
+  rules: String
+  score: Float!
+  updatedAt: DateTime!
+}
+
+type GameFavorite {
+  createdAt: DateTime!
+  game: Game
+  gameId: ID!
+  id: ID!
+  updatedAt: DateTime!
+  userId: ID!
+}
+
+type GameHistory {
+  createdAt: DateTime!
+  duration: Int!
+  game: Game
+  gameId: ID!
+  id: ID!
+  score: Int!
+  state: String!
+  totalDamage: Int!
+  updatedAt: DateTime!
+  userId: ID!
+}
+
+type Leaderboard {
+  entries: [LeaderboardEntry!]!
+  gameId: ID!
+  gameName: String!
+  generatedAt: DateTime!
+}
+
+type LeaderboardEntry {
+  bestScore: Int!
+  name: String
+  nickname: String!
+  rank: Int!
+  totalGames: Int!
+  totalScore: Int!
+  userId: ID!
+  wins: Int!
+}
+
 type Level {
+  atomicNumber: Int!
+  chemicalSymbol: String!
   color: String!
   createdAt: DateTime!
   experienceRequired: Int!
-  id: ID!
+  id: Int!
   name: String!
-  number: Int!
   updatedAt: DateTime!
+  users: [User!]
+}
+
+input LoginInput {
+  email: String!
+  password: String!
 }
 
 type Mutation {
   acceptFriendInvite(input: AcceptFriendInviteInput!): Friend!
+  assignSkin(data: CreateUserSkinInput!): UserSkin!
   createFriendInvite(input: CreateFriendInviteInput!): String!
+  createGame(input: CreateGameInput!): Game!
   createLevel(data: CreateLevelInput!): Level!
+  createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
+  createSkin(data: CreateSkinInput!): Skin!
   createUser(data: CreateUserInput!): User!
+  deleteGame(id: Int!): Game!
   deleteLevel(id: Int!): Level!
+  deleteSkin(id: ID!): Skin!
   deleteUser(id: ID!): User!
+  login(loginInput: LoginInput!): AuthResponse!
   markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
+  register(registerInput: RegisterInput!): User!
   removeFriend(id: ID!): Boolean!
   requestFriendByUsername(input: RequestFriendByUsernameInput!): Friend!
+  saveGameResult(input: SaveGameResultInput!): GameHistory!
   sendMessage(input: SendMessageInput!): ChatMessage!
+  toggleFavorite(input: ToggleFavoriteInput!): Boolean!
   toggleFriendActive(input: ToggleFriendActiveInput!): Friend!
   updateFriendStatus(input: UpdateFriendStatusInput!): Friend!
+  updateGame(id: Int!, input: UpdateGameInput!): Game!
 }
 
 type Query {
+  game(id: Int!): Game!
+  games: [Game!]!
+  globalLeaderboard: Leaderboard!
+  leaderboard(gameId: Int!): Leaderboard!
   level(id: Int!): Level!
   levels: [Level!]!
   messages(chatId: ID!): [ChatMessage!]!
   myFriends(userId: ID!): [Friend!]!
+  skin(id: ID!): Skin!
+  skins: [Skin!]!
+  userFavorites(userId: Int!): [GameFavorite!]!
+  userGames(gameId: Int!, userId: Int!): [GameHistory!]!
+  userSkins: [UserSkin!]!
   users: [User!]!
+}
+
+input RegisterInput {
+  birthday: String!
+  email: String!
+  lastname: String!
+  name: String!
+  password: String!
+  username: String!
 }
 
 input RequestFriendByUsernameInput {
   requesterId: ID!
   username: String!
+}
+
+input SaveGameResultInput {
+  duration: Int!
+  gameId: ID!
+  score: Int!
+  state: String!
+  totalDamage: Int!
+  userId: ID!
 }
 
 input SendMessageInput {
@@ -109,9 +247,25 @@ input SendMessageInput {
   senderId: ID!
 }
 
+type Skin {
+  createdAt: DateTime!
+  id: ID!
+  img: String!
+  level: Int!
+  name: String!
+  updatedAt: DateTime!
+  users: [User]
+  value: Float!
+}
+
 type Subscription {
   messageAdded(chatId: ID!): ChatMessage!
   messageUpdated(chatId: ID!): ChatMessage!
+}
+
+input ToggleFavoriteInput {
+  gameId: ID!
+  userId: ID!
 }
 
 input ToggleFriendActiveInput {
@@ -124,14 +278,45 @@ input UpdateFriendStatusInput {
   status: FriendStatus!
 }
 
+input UpdateGameInput {
+  category: String
+  description: String
+  duration: String
+  gameLogo: String
+  maxPlayers: Int
+  minPlayers: Int
+  name: String
+  rules: String
+  score: Int
+}
+
 type User {
   birthday: DateTime!
+  chats: [String!]!
   createdAt: DateTime!
   email: String!
-  id: ID!
+  experience: Float!
+  friends: [String!]!
+  gameFavorites: [String!]!
+  gameHistory: [String!]!
+  id: String!
   lastname: String!
+  level: Level!
   levelId: Int!
   name: String!
-  nickname: String!
+  nickname: String
+  notifications: [String!]!
+  skins: [String!]!
+  updatedAt: DateTime!
   username: String!
+}
+
+type UserSkin {
+  acquiredAt: DateTime!
+  equipped: Boolean!
+  id: ID!
+  skin: Skin
+  skinId: String!
+  user: User
+  userId: String!
 }

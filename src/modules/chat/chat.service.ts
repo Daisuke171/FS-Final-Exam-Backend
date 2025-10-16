@@ -1,11 +1,7 @@
 import { Injectable, NotFoundException  } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { ObservableService } from '../../common/observable.service';
+import { PrismaService } from 'prisma/prisma.service';
+import { ObservableService } from '@common/observable.service';
 import { SendMessageInput } from './dto/send-message.input';
-
-/* import { ChatMessage } from '../models/chat-message.model';
-import { Chat } from '../models/chat.model';
-import  ChatMessageClass  from './types/chat-message'; */
 
 @Injectable()
 export class ChatService {

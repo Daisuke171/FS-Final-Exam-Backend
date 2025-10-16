@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { ObservableService } from '../../common/observable.service';
+import { PrismaService } from 'prisma/prisma.service';
+import { ObservableService } from '@common/observable.service';
 import { randomBytes, createHash } from 'crypto';
 import { addHours, isBefore } from 'date-fns';
 import type { Friend as PrismaFriend } from '@prisma/client';

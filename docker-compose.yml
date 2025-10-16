@@ -1,16 +1,16 @@
 services:
   postgres:
     image: postgres:15
-    container_name: postgres_db
+    container_name: sanya-postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: nicron
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: sanya-db
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - '5432:5432'
 
   pgadmin:
     image: dpage/pgadmin4
@@ -20,7 +20,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
-      - "8080:80"
+      - '8080:80'
     depends_on:
       - postgres
 

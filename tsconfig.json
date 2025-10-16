@@ -2,31 +2,59 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2021",
-    "moduleResolution": "node",
     "outDir": "./dist",
     "baseUrl": "./",
-
+    "paths": {
+      "@common/*": [
+        "src/common/*"
+      ],
+      "@graphql/*": [
+        "src/graphql/*"
+      ],
+      "@modules/*": [
+        "src/modules/*"
+      ],
+      "@types/*": [
+        "src/types/*"
+      ]
+    },
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
-
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-
     "declaration": true,
     "sourceMap": true,
     "incremental": true,
-
     "skipLibCheck": true,
     "strict": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "strictNullChecks": true,
+    "strictPropertyInitialization": false,
     "forceConsistentCasingInFileNames": true,
-
-    "types": ["node"],                   
-    "typeRoots": ["./node_modules/@types", "./src/types"]  
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
   },
-  "include": ["src", "prisma", "src/types"],
-  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
+  "ts-node": {
+    "require": [
+      "tsconfig-paths/register"
+    ] 
+  },
+  "include": [
+    "src",
+    "prisma",
+    "src/types"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "**/*.spec.ts"
+  ]
 }
