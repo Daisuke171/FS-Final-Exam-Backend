@@ -5,7 +5,7 @@ import { GameFavorite } from './game-favorite.model';
 @ObjectType()
 export class Game {
   @Field(() => ID)
-  id: number;
+  id: string;
 
   @Field()
   name: string;
@@ -19,7 +19,7 @@ export class Game {
   @Field({ nullable: true })
   gameLogo?: string;
 
-  @Field()
+  @Field(() => Int)
   score: number;
 
   @Field()

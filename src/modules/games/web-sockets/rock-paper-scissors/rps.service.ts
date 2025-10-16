@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Game, RoomConfig, WaitingState } from './states/rps.states';
-import { GamesService } from '../../games.service';
+import { GamesService } from '@modules/games/games.service';
 
 @Injectable()
 export class RpsService {

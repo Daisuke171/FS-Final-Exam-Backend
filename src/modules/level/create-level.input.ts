@@ -5,11 +5,15 @@ import { IsString, IsInt, Min } from 'class-validator';
 export class CreateLevelInput {
   @Field(() => Int)
   @IsInt()
-  number: number;
+  atomicNumber: number;
 
   @Field()
   @IsString()
   name: string;
+
+  @Field(() => String)
+  @IsString()
+  chemicalSymbol: string;
 
   @Field()
   @IsString()

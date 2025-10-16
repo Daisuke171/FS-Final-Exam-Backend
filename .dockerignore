@@ -1,0 +1,11 @@
+// lista de archivos/directorios a ignorar
+
+// archivos
+.env
+.gitignore
+Dockerfile
+README.md
+
+// directorios
+node_modules
+dist    

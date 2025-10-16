@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { User } from 'src/modules/user/models/user.model';
+import { User } from '@modules/user/models/user.model';
 
 @ObjectType()
 export class Level {
@@ -13,7 +13,10 @@ export class Level {
   name: string;
 
   @Field(() => Int)
-  number: number;
+  atomicNumber: number;
+
+  @Field(() => String)
+  chemicalSymbol: string;
 
   @Field()
   color: string;
@@ -26,4 +29,10 @@ export class Level {
 
   @Field(() => Date)
   updatedAt: Date;
+}
+
+@ObjectType()
+export class CreateManyResult {
+  @Field(() => Int)
+  count: number;
 }

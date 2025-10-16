@@ -1,23 +1,23 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { User } from 'src/modules/user/models/user.model';
-import { Skin } from 'src/modules/skins/models/skins.model';
+import { User } from '@modules/user/models/user.model';
+import { Skin } from '@modules/skins/models/skins.model';
 
 @ObjectType()
 export class UserSkin {
   @Field(() => ID)
-  id: string;
+  id!: string;
 
   @Field()
-  userId: string;
+  userId!: string;
 
   @Field()
-  skinId: string;
+  skinId!: string;
 
   @Field()
-  equipped: boolean;
+  equipped!: boolean;
 
   @Field()
-  acquiredAt: Date;
+  acquiredAt!: Date;
 
   @Field(() => User, { nullable: true })
   user?: User;

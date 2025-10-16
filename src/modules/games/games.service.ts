@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { CreateGameInput } from './inputs/create-game.input';
 import { UpdateGameInput } from './inputs/update-game.input';
 import { SaveGameResultInput } from './inputs/save-game.input';
@@ -112,11 +112,11 @@ export class GamesService {
     });
   }
 
-  async getUserGameHistory(userId: string, gameId: string) {
+  async getUserGameHistory(userId: string, gameId?: string) {
     return this.prisma.gameHistory.findMany({
       where: {
         userId,
-        gameId,
+        ...(gameId && { gameId }),
       },
       orderBy: {
         createdAt: 'desc',
@@ -124,6 +124,7 @@ export class GamesService {
       include: {
         game: true,
       },
+      take: 10,
     });
   }
 

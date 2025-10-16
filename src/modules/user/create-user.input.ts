@@ -6,7 +6,8 @@ import {
   IsOptional,
   IsInt,
 } from 'class-validator';
-import { InputType, Field, Int } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { InputType, Field, Int, GraphQLISODateTime } from '@nestjs/graphql';
 
 @InputType()
 export class CreateUserInput {
