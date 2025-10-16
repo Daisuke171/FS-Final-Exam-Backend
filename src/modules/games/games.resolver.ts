@@ -27,7 +27,7 @@ export class GamesResolver {
   @Query(() => [GameHistory], { name: 'userGames' })
   async userGames(
     @Args('userId', { type: () => ID }) userId: string,
-    @Args('gameId', { type: () => ID }) gameId: string,
+    @Args('gameId', { type: () => ID }) gameId?: string,
   ) {
     return this.gamesService.getUserGameHistory(userId, gameId);
   }
