@@ -20,7 +20,7 @@ import { GamesModule } from './modules/games/games.module';
 import { RpsModule } from './modules/games/web-sockets/rock-paper-scissors/rps.module';
 import { LevelModule } from './modules/level/level.module';
 import { NotificationModule } from './modules/notification/notificacion.module';
-//import { CallsModule } from './modules/calls/calls.module';
+import { CallsModule } from './modules/calls/calls.module';
 @Module({
   imports: [
     CommonModule,
@@ -38,7 +38,7 @@ import { NotificationModule } from './modules/notification/notificacion.module';
     AuthModule,
     SkinsModule,
     UserSkinModule,
-    //   CallsModule,
+    CallsModule,
     // http://localhost:3010/graphql for playground
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,

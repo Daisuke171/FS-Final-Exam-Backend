@@ -7,9 +7,33 @@ input AcceptFriendInviteInput {
   token: String!
 }
 
+input AnswerCallInput {
+  callId: ID!
+  calleeId: ID!
+  sdpAnswer: String!
+}
+
 type AuthResponse {
   accessToken: String!
   user: User!
+}
+
+type Call {
+  calleeId: ID!
+  callerId: ID!
+  createdAt: DateTime!
+  id: ID!
+  sdpAnswer: String
+  sdpOffer: String
+  status: CallStatus!
+  updatedAt: DateTime!
+}
+
+enum CallStatus {
+  ACCEPTED
+  ENDED
+  REJECTED
+  RINGING
 }
 
 type ChatMessage {
@@ -177,6 +201,7 @@ input LoginInput {
 
 type Mutation {
   acceptFriendInvite(input: AcceptFriendInviteInput!): Friend!
+  answerCall(input: AnswerCallInput!): Call!
   assignSkin(data: CreateUserSkinInput!): UserSkin!
   createFriendInvite(input: CreateFriendInviteInput!): String!
   createGame(input: CreateGameInput!): Game!
@@ -188,13 +213,16 @@ type Mutation {
   deleteLevel(id: Int!): Level!
   deleteSkin(id: ID!): Skin!
   deleteUser(id: ID!): User!
+  endCall(callId: ID!): Call!
   login(loginInput: LoginInput!): AuthResponse!
   markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
   register(registerInput: RegisterInput!): User!
+  rejectCall(callId: ID!): Call!
   removeFriend(id: ID!): Boolean!
   requestFriendByUsername(input: RequestFriendByUsernameInput!): Friend!
   saveGameResult(input: SaveGameResultInput!): GameHistory!
   sendMessage(input: SendMessageInput!): ChatMessage!
+  startCall(calleeId: ID!, sdpOffer: String!): Call!
   toggleFavorite(input: ToggleFavoriteInput!): Boolean!
   toggleFriendActive(input: ToggleFriendActiveInput!): Friend!
   updateFriendStatus(input: UpdateFriendStatusInput!): Friend!
@@ -209,6 +237,7 @@ type Query {
   level(id: Int!): Level!
   levels: [Level!]!
   messages(chatId: ID!): [ChatMessage!]!
+  myActiveCalls: [Call!]!
   myFriends(userId: ID!): [Friend!]!
   skin(id: ID!): Skin!
   skins: [Skin!]!
@@ -261,6 +290,7 @@ type Skin {
 }
 
 type Subscription {
+  callRinging(calleeId: ID!): Call!
   messageAdded(chatId: ID!): ChatMessage!
   messageUpdated(chatId: ID!): ChatMessage!
 }

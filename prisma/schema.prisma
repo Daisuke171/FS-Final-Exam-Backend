@@ -31,6 +31,9 @@ model User {
   friendInvitesTargeted FriendInvite[] @relation("FriendInvitesTarget") // link dirigido a mí
   friendInvitesUsed     FriendInvite[] @relation("FriendInvitesUsed") // yo usé el link
   chats                 Chat[]
+  // Relaciones de llamadas
+  callsMade             Call[]         @relation("CallsAsCaller")
+  callsReceived         Call[]         @relation("CallsAsCallee")
   createdAt             DateTime       @default(now()) @map("created_at")
   updatedAt             DateTime       @updatedAt @map("updated_at")
 
@@ -44,8 +47,8 @@ model Skin {
   level     Int
   value     Float
   users     UserSkin[]
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
 
   @@map("skins")
 }
@@ -65,7 +68,7 @@ model UserSkin {
 
 model Level {
   id                 Int      @id @default(autoincrement())
-  atomicNumber       Int    @map("atomic_number")
+  atomicNumber       Int      @map("atomic_number")
   name               String
   color              String
   chemicalSymbol     String   @map("chemical_symbol")
@@ -184,7 +187,7 @@ model Chat {
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
 
-  @@unique([friendId])  
+  @@unique([friendId])
   @@map("chats")
 }
 
@@ -239,4 +242,34 @@ model Color {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("colors")
+}
+
+enum CallStatus {
+  RINGING
+  ACCEPTED
+  REJECTED
+  ENDED
+}
+
+model Call {
+  id       String     @id @default(uuid())
+  callerId String     @map("caller_id")
+  calleeId String     @map("callee_id")
+  status   CallStatus @default(RINGING)
+
+  // SDP
+  sdpOffer  String? @map("sdp_offer")
+  sdpAnswer String? @map("sdp_answer")
+
+  // timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  caller User @relation("CallsAsCaller", fields: [callerId], references: [id])
+  callee User @relation("CallsAsCallee", fields: [calleeId], references: [id])
+
+  @@index([callerId])
+  @@index([calleeId])
+  @@index([status])
+  @@map("calls")
 }
