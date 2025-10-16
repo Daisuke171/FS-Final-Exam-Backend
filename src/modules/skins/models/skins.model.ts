@@ -4,26 +4,26 @@ import { User } from 'src/modules/user/models/user.model';
 @ObjectType()
 export class Skin {
   @Field(() => ID)
-  id: string;
+  id!: string;
 
   @Field()
-  name: string;
+  name!: string;
 
   @Field()
-  img: string;
+  img!: string;
 
   @Field(() => Int)
-  level: number;
+  level!: number;
 
   @Field(() => Float)
-  value: number;
+  value!: number;
 
   @Field(() => [User], { nullable: 'itemsAndList' })
   users?: User[];
 
   @Field()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

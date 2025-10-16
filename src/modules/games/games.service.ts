@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { CreateGameInput } from './inputs/create-game.input';
 import { UpdateGameInput } from './inputs/update-game.input';
 import { SaveGameResultInput } from './inputs/save-game.input';
@@ -112,11 +112,11 @@ export class GamesService {
     });
   }
 
-  async getUserGameHistory(userId: string, gameId: string) {
+  async getUserGameHistory(userId: string, gameId?: string) {
     return this.prisma.gameHistory.findMany({
       where: {
         userId,
-        gameId,
+        ...(gameId && { gameId }),
       },
       orderBy: {
         createdAt: 'desc',
@@ -124,6 +124,7 @@ export class GamesService {
       include: {
         game: true,
       },
+      take: 10,
     });
   }
 
@@ -249,6 +250,102 @@ export class GamesService {
       gameName: 'Global',
       entries,
       generatedAt: new Date(),
+    };
+  }
+
+  async getUserStats(userId: string, gameId?: string) {
+    // Verificar que el usuario existe
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Filtro base
+    const whereClause: any = { userId };
+    if (gameId) {
+      whereClause.gameId = gameId;
+    }
+
+    // Obtener todos los juegos del usuario
+    const games = await this.prisma.gameHistory.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (games.length === 0) {
+      return {
+        winRate: 0,
+        totalTime: '0h 0m',
+        highScore: 0,
+        bestStreak: 0,
+        avgPerDay: 0,
+        totalGames: 0,
+        totalWins: 0,
+        totalLosses: 0,
+        totalDraws: 0,
+        averageScore: 0,
+        totalDamage: 0,
+      };
+    }
+
+    // Calcular estadísticas
+    const totalGames = games.length;
+    const totalWins = games.filter((g) => g.state === 'won').length;
+    const totalLosses = games.filter((g) => g.state === 'lost').length;
+    const totalDraws = games.filter((g) => g.state === 'draw').length;
+    const winRate = (totalWins / totalGames) * 100;
+
+    // Tiempo total jugado (en minutos)
+    const totalMinutes = games.reduce((sum, g) => sum + g.duration, 0);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const totalTime = `${hours}h ${minutes}m`;
+
+    // Mejor puntuación
+    const highScore = Math.max(...games.map((g) => g.score));
+
+    // Mejor racha
+    let currentStreak = 0;
+    let bestStreak = 0;
+    games.forEach((game) => {
+      if (game.state === 'won') {
+        currentStreak++;
+        bestStreak = Math.max(bestStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    });
+
+    // Promedio de partidas por día
+    const firstGameDate = new Date(games[games.length - 1].createdAt);
+    const lastGameDate = new Date(games[0].createdAt);
+    const daysDiff = Math.ceil(
+      (lastGameDate.getTime() - firstGameDate.getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+    const avgPerDay =
+      daysDiff > 0
+        ? parseFloat((totalGames / daysDiff).toFixed(1))
+        : totalGames;
+
+    // Promedio de score
+    const averageScore = Math.round(
+      games.reduce((sum, g) => sum + g.score, 0) / totalGames,
+    );
+
+    return {
+      winRate: parseFloat(winRate.toFixed(1)),
+      totalTime,
+      highScore,
+      bestStreak,
+      avgPerDay,
+      totalGames,
+      totalWins,
+      totalLosses,
+      totalDraws,
+      averageScore,
     };
   }
 

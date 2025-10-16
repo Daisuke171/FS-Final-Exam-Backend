@@ -1,5 +1,5 @@
 import { getRandomMove } from '../utils/getRandomMove';
-import { GamesService } from 'src/modules/games/games.service';
+import { GamesService } from '@modules/games/games.service';
 
 export enum Moves {
   ROCK = 'piedra',
@@ -53,6 +53,7 @@ export class Game {
   private emitCallback?: (event: string, data: any) => void;
   private onRoomEmpty?: (roomId: string) => void;
   private cleanupTimer?: NodeJS.Timeout;
+  public playerUserIds: Map<string, string> = new Map();
   damageDealt: Map<string, number> = new Map();
   startTime: number = Date.now();
 
@@ -471,10 +472,15 @@ export class FinishedState extends GameState {
     const gamesApiService = game.getGamesApiService();
     const duration = Math.floor((Date.now() - game.startTime) / 1000);
 
+    const userId1 =
+      game.playerUserIds.get(p1) || '4cf608e1-0c2c-46ea-a2bb-04a42d56f7e1';
+    const userId2 =
+      game.playerUserIds.get(p2) || '79176965-f4a8-40e3-a8af-007cc296085e';
+
     try {
       await gamesApiService.saveGameResult({
-        userId: p1,
-        gameId: '5c13f20e-0eb3-4938-b952-008c074c6f8e',
+        userId: userId1,
+        gameId: userId2,
         duration,
         state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
         score: this.calculateScore(hp1, game.history.length, winner === p1),
@@ -482,8 +488,8 @@ export class FinishedState extends GameState {
       });
 
       await gamesApiService.saveGameResult({
-        userId: p2,
-        gameId: '5c13f20e-0eb3-4938-b952-008c074c6f8e',
+        userId: '4cf608e1-0c2c-46ea-a2bb-04a42d56f7e1',
+        gameId: '79176965-f4a8-40e3-a8af-007cc296085e',
         duration,
         state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
         score: this.calculateScore(hp2, game.history.length, winner === p2),

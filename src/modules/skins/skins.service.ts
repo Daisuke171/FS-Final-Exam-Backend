@@ -3,7 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { CreateSkinInput } from './create-skins.input';
 import type { Skin as PrismaSkin } from '@prisma/client';
 import { Prisma } from '@prisma/client';

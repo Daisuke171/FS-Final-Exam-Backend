@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { RegisterInput } from './inputs/register.input';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 import { User as PrismaUser, Level } from '@prisma/client';
 
 type UserWithLevel = PrismaUser & { level: Level };
@@ -20,8 +20,14 @@ export class AuthService {
   ) {}
 
   async register(data: RegisterInput) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email },
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: data.email },
+          { username: data.username },
+          { nickname: data.nickname },
+        ],
+      },
       include: {
         level: true,
       },
@@ -41,8 +47,9 @@ export class AuthService {
         data: {
           experienceRequired: 0,
           name: 'Principiante',
-          number: 0,
+          atomicNumber: 0,
           color: '#000000',
+          chemicalSymbol: "Ni"
         },
       });
     }
