@@ -138,7 +138,7 @@ type Game {
   minPlayers: Int!
   name: String!
   rules: String
-  score: Float!
+  score: Int!
   updatedAt: DateTime!
 }
 
@@ -148,6 +148,7 @@ type GameFavorite {
   gameId: ID!
   id: ID!
   updatedAt: DateTime!
+  user: User
   userId: ID!
 }
 
@@ -161,6 +162,7 @@ type GameHistory {
   state: String!
   totalDamage: Int!
   updatedAt: DateTime!
+  user: User
   userId: ID!
 }
 
@@ -236,6 +238,7 @@ type Query {
   leaderboard(gameId: ID!): Leaderboard!
   level(id: Int!): Level!
   levels: [Level!]!
+  me(userId: String!): User!
   messages(chatId: ID!): [ChatMessage!]!
   myActiveCalls: [Call!]!
   myFriends(userId: ID!): [Friend!]!
@@ -328,6 +331,7 @@ type User {
   createdAt: DateTime!
   email: String!
   experience: Float!
+  experienceToNextLevel: Int!
   friends: [String!]!
   gameFavorites: [String!]!
   gameHistory: [String!]!
@@ -335,10 +339,13 @@ type User {
   lastname: String!
   level: Level!
   levelId: Int!
+  levelProgress: Float!
   name: String!
+  nextLevelExperience: Int
   nickname: String
   notifications: [String!]!
   skins: [String!]!
+  totalScore: Int!
   updatedAt: DateTime!
   username: String!
 }
