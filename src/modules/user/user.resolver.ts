@@ -12,7 +12,7 @@ import {
 import { UserService } from './user.service';
 import { User } from './models/user.model';
 import { CreateUserInput } from './create-user.input';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from 'prisma/prisma.service';
 
 @Resolver(() => User)
 export class UserResolver {
@@ -39,7 +39,7 @@ export class UserResolver {
     // Obtener el siguiente nivel
     const nextLevel = await this.prisma.level.findFirst({
       where: {
-        number: user.level.number + 1, // Siguiente nivel
+        atomicNumber: user.level.atomicNumber + 1, // Siguiente nivel
       },
     });
 
@@ -51,7 +51,7 @@ export class UserResolver {
   async levelProgress(@Parent() user: User): Promise<number> {
     const nextLevel = await this.prisma.level.findFirst({
       where: {
-        number: user.level.number + 1,
+        atomicNumber: user.level.atomicNumber + 1,
       },
     });
 
@@ -70,7 +70,7 @@ export class UserResolver {
   async experienceToNextLevel(@Parent() user: User): Promise<number> {
     const nextLevel = await this.prisma.level.findFirst({
       where: {
-        number: user.level.number + 1,
+        atomicNumber: user.level.atomicNumber + 1,
       },
     });
 
