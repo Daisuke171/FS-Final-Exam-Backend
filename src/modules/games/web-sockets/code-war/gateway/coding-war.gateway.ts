@@ -8,9 +8,9 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { RpsService } from '../rps.service';
-import { Moves, Game, StartingState, PlayingState } from '../states/rps.states';
-import { GamesService } from '@modules/games/games.service';
+import { CWService } from '../coding-war.service';
+import { Game, StartingState, PlayingState } from '../states/coding-war.states';
+import { GamesService } from 'src/modules/games/games.service';
 
 interface StateProps {
   state: string;
@@ -19,8 +19,6 @@ interface StateProps {
   result?: unknown;
   history?: unknown;
   ready: Record<string, boolean>;
-  hp: Record<string, number>;
-  currentMoves: Record<string, Moves>;
   roomInfo: {
     id: string;
     name: string;
@@ -29,26 +27,21 @@ interface StateProps {
     isPrivate: boolean;
   };
 }
-interface PlayerInfo {
-  nickname: string;
-  userId: string;
-}
 
 @WebSocketGateway({
-  namespace: '/rps',
+  namespace: '/coding-war',
   cors: {
     origin: '*',
   },
 })
-export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   private playerRooms: Map<string, string> = new Map();
-  private playerInfo: Map<string, PlayerInfo> = new Map();
 
   constructor(
-    private gameService: RpsService,
+    private gameService: CWService,
     private gameApiService: GamesService,
   ) {}
 
@@ -63,40 +56,14 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (roomId) {
       const game = this.gameService.getGame(roomId);
       if (game) {
-        const playerInfo = this.playerInfo.get(client.id);
-        const nickname = playerInfo?.nickname || client.id;
-        game.disconnect(nickname);
-        game.clearReady(nickname);
+        game.disconnect(client.id);
+        game.clearReady(client.id);
         if (game.players.size > 0) {
           this.emitGameState(roomId, game);
         }
       }
       this.playerRooms.delete(client.id);
     }
-    this.playerInfo.delete(client.id);
-  }
-
-  @SubscribeMessage('setUserInfo')
-  handleSetUserInfo(
-    @MessageBody() data: { nickname: string; userId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    this.playerInfo.set(client.id, {
-      nickname: data.nickname,
-      userId: data.userId,
-    });
-    console.log(
-      `Cliente ${client.id} asignó - Nickname: ${data.nickname}, UserId: ${data.userId}`,
-    );
-  }
-
-  private getPlayerInfo(clientId: string): PlayerInfo {
-    return (
-      this.playerInfo.get(clientId) || {
-        nickname: clientId,
-        userId: '',
-      }
-    );
   }
 
   @SubscribeMessage('playerReadyForMatch')
@@ -106,8 +73,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     try {
       const game = this.gameService.getGame(data.roomId);
-      const playerInfo = this.getPlayerInfo(client.id);
-      const nickname = playerInfo.nickname;
 
       if (!game) {
         console.error(
@@ -117,9 +82,9 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      if (!game.players.has(nickname)) {
+      if (!game.players.has(client.id)) {
         console.error(
-          `[playerReadyForMatch] Jugador ${nickname} no está en el juego`,
+          `[playerReadyForMatch] Jugador ${client.id} no está en el juego`,
         );
         client.emit('error', { message: 'No estás en este juego' });
         return;
@@ -140,7 +105,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         playingState &&
         typeof playingState.handlePlayerReady === 'function'
       ) {
-        playingState.handlePlayerReady(nickname, game);
+        playingState.handlePlayerReady(client.id, game);
       }
     } catch (error) {
       console.error('[playerReadyForMatch] Error:', error);
@@ -155,21 +120,17 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const roomId = data.roomId;
     const game = this.gameService.getGame(roomId);
-    const playerInfo = this.getPlayerInfo(client.id);
-    const nickname = playerInfo.nickname;
     if (!game) {
       client.emit('error', 'Juego no encontrado');
       return;
     }
 
     const isReady = data.ready ?? true;
-    game.setReady(nickname, isReady);
+    game.setReady(client.id, isReady);
 
     this.emitGameState(roomId, game);
 
     if (game.isAllReady() && game.players.size === 2) {
-      game.moves.clear();
-
       game.setState(new StartingState());
       this.emitGameState(roomId, game);
     }
@@ -182,8 +143,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const roomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const playerInfo = this.getPlayerInfo(client.id);
-    const nickname = playerInfo.nickname;
 
     const roomConfig = {
       name: data.roomName,
@@ -204,8 +163,8 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.gameService.deleteGame(emptyRoomId);
     });
 
-    game.join(nickname);
-    game.playerUserIds.set(nickname, playerInfo.userId);
+    game.join(client.id);
+
     void client.join(roomId);
     this.playerRooms.set(client.id, roomId);
 
@@ -229,8 +188,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     console.log(`Cliente ${client.id} quiere unirse a la sala ${data.roomId}`);
-    const playerInfo = this.getPlayerInfo(client.id);
-    const nickname = playerInfo.nickname;
     const game: Game | undefined = this.gameService.getGame(data.roomId);
 
     if (!game) {
@@ -240,8 +197,8 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    if (game.players.has(nickname)) {
-      console.log(`Cliente ${nickname} ya está en la sala ${data.roomId}`);
+    if (game.players.has(client.id)) {
+      console.log(`Cliente ${client.id} ya está en la sala ${data.roomId}`);
       this.emitGameState(data.roomId, game);
       return;
     }
@@ -280,29 +237,13 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.gameService.deleteGame(emptyRoomId);
     });
     this.server.to(client.id).emit('joinRoomSuccess', { roomId: data.roomId });
-    game.join(nickname);
-    game.playerUserIds.set(nickname, playerInfo.userId);
+    game.join(client.id);
     void client.join(data.roomId);
     this.playerRooms.set(client.id, data.roomId);
     this.emitGameState(data.roomId, game);
+    console.log(this.emitGameState(data.roomId, game));
   }
 
-  @SubscribeMessage('makeMove')
-  handleMakeMove(
-    @MessageBody() data: { roomId: string; move: Moves },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const game: Game | undefined = this.gameService.getGame(data.roomId);
-    const playerInfo = this.getPlayerInfo(client.id);
-    const nickname = playerInfo.nickname;
-    if (!game) {
-      client.emit('error', 'Juego no encontrado');
-      return;
-    }
-
-    game.move(nickname, data.move);
-    this.emitGameState(data.roomId, game);
-  }
   @SubscribeMessage('getPublicRooms')
   handleGetPublicRooms(@ConnectedSocket() client: Socket) {
     const publicRooms = this.gameService.getPublicRooms();
@@ -311,12 +252,10 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('roomChat')
   handleRoomChat(client: Socket, payload: { roomId: string; message: string }) {
     const { roomId, message } = payload;
-    const playerInfo = this.getPlayerInfo(client.id);
-    const nickname = playerInfo.nickname;
     const timestamp = new Date().toISOString();
     console.log(`Mensaje en sala ${roomId} de ${client.id}: ${message}`);
     this.server.to(roomId).emit('roomChatMessages', {
-      playerId: nickname,
+      playerId: client.id,
       message,
       timestamp,
     });
@@ -327,8 +266,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const game = this.gameService.getGame(data.roomId);
-    const playerInfo = this.getPlayerInfo(client.id);
-    const nickname = playerInfo.nickname;
     if (!game) {
       client.emit('error', 'Juego no encontrado');
       return;
@@ -336,7 +273,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const isInRoom = this.playerRooms.get(client.id) === data.roomId;
     if (!isInRoom) {
-      if (game.players.has(nickname)) {
+      if (game.players.has(client.id)) {
         void client.join(data.roomId);
         this.playerRooms.set(client.id, data.roomId);
       } else {
@@ -356,8 +293,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       playerCount: game.players.size,
       history: game.history,
       ready: Object.fromEntries(game.ready.entries()),
-      hp: Object.fromEntries(game.hp.entries()),
-      currentMoves: Object.fromEntries(game.moves.entries()),
       roomInfo: {
         id: game.roomId,
         name: game.roomConfig.name,

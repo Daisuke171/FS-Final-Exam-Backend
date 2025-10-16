@@ -1,24 +1,32 @@
 import { ObjectType, Field, ID, GraphQLISODateTime } from '@nestjs/graphql';
-
+import { IsUUID, IsString, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
 
 @ObjectType()
 export class ChatMessage {
   @Field(() => ID)
+  @IsUUID()
   id!: string;
 
-  @Field()
+  @Field(() => ID)
+  @IsUUID()
   chatId!: string;
 
-  @Field()
+  @Field(() => ID)
+  @IsUUID()
   senderId!: string;
 
-  @Field()
+  @Field(() => String)
+  @IsString()
+  @IsNotEmpty()
   message!: string;
 
-  @Field()
+  @Field(() => String)
+  @IsString()
+  @IsNotEmpty()
   status!: string;
 
   @Field()
+  @IsBoolean()
   read!: boolean;
 
   @Field(() => GraphQLISODateTime)

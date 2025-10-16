@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException  } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ObservableService } from '@common/observable.service';
 import { SendMessageInput } from './dto/send-message.input';
+import { CreateChatFriendInput } from "./dto/create-chat-friend.input";
 
 @Injectable()
 export class ChatService {
@@ -10,39 +11,13 @@ export class ChatService {
     private readonly observable: ObservableService,
   ) {}
 
-
-  // create un chat entre dos usuarios (si no existe)
-  async createChat(userId: string, friendId: string) {
-    // valida que existan ambos usuarios
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    });
-    if (!user) throw new NotFoundException('No existe el usuario');
-
-    const friend = await this.prisma.user.findUnique({
-      where: { id: friendId },
-      select: { id: true },
-    });
-    if (!friend) throw new NotFoundException('No existe el amigo');
-
-    const chat = await this.prisma.chat.create({
-      data: {
-        userId,
-        friendId,
-      },
-    });
-
-    return chat;
-  }
-
     async sendMessage(input: SendMessageInput) {
     // valida que exista el chat
-    const chat = await this.prisma.chat.findUnique({
+    const $chat = await this.prisma.chat.findUnique({
       where: { id: input.chatId },
       select: { id: true },
     });
-    if (!chat) throw new NotFoundException('Chat not found');
+    if (!$chat) throw new NotFoundException('Chat not found');
 
     const newMsg = await this.prisma.chatMessage.create({
       data: {

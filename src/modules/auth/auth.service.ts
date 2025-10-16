@@ -20,8 +20,14 @@ export class AuthService {
   ) {}
 
   async register(data: RegisterInput) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email },
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: data.email },
+          { username: data.username },
+          { nickname: data.nickname },
+        ],
+      },
       include: {
         level: true,
       },

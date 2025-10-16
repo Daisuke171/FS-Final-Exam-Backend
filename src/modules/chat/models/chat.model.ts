@@ -1,19 +1,23 @@
 import { ObjectType, Field, ID, GraphQLISODateTime } from '@nestjs/graphql';
 import { ChatMessage } from './chat-message.model';
-import { User } from '@modules/user/models/user.model';
+import { IsUUID, IsString, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
 
 @ObjectType()
 export class Chat {
   @Field(() => ID)
+  @IsUUID()
   id!: string;
 
-  @Field(() => User)
-  userId!: User;
+  @Field(() => ID)
+  @IsUUID()
+  userId!: string;
 
-  @Field(() => User)
-  friendId!: User;
+  @Field(() => ID)
+  @IsUUID()
+  friendId!: string;
 
   @Field(() => [ChatMessage])
+  @IsOptional()
   messages!: ChatMessage[];
 
   @Field(() => GraphQLISODateTime)

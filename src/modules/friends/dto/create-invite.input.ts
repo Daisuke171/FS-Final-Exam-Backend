@@ -1,14 +1,20 @@
-import { InputType, Field, ID, Int } from '@nestjs/graphql';
+import { InputType, Field, Int } from '@nestjs/graphql';
+import { IsOptional, IsString, IsUUID, IsInt, Min } from 'class-validator';
 
 @InputType()
 export class CreateFriendInviteInput {
-  @Field(() => ID)
-  inviterId!: string;
+  @Field({ nullable: false })
+  @IsUUID()
+  inviterId: string;
 
   @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
   targetUsername?: string;
 
-  // horas hasta expirar (default 24)
-  @Field(() => Int, { defaultValue: 24 })
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   ttlHours?: number;
 }

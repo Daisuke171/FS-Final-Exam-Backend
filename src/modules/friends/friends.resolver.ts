@@ -27,11 +27,14 @@ export class FriendsResolver {
 
   @Mutation(() => String)
   createFriendInvite(@Args('input') input: CreateFriendInviteInput) {
+    console.log('Input recibido:', input);
     return this.friends.createInvite(input);
   }
 
   @Mutation(() => Friend)
-  acceptFriendInvite(@Args('input') input: AcceptFriendInviteInput) {
+  acceptFriendInvite(@Args('input', { type: () => AcceptFriendInviteInput }) input: AcceptFriendInviteInput) {
+    console.log('acceptFriendInvite input =>', input);
+
     return this.friends.acceptInvite(input);
   }
 

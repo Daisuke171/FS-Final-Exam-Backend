@@ -13,19 +13,19 @@ type AuthResponse {
 }
 
 type ChatMessage {
-  chatId: String!
+  chatId: ID!
   id: ID!
   message: String!
   read: Boolean!
-  senderId: String!
+  senderId: ID!
   status: String!
   timestamp: DateTime!
 }
 
 input CreateFriendInviteInput {
-  inviterId: ID!
+  inviterId: String!
   targetUsername: String
-  ttlHours: Int! = 24
+  ttlHours: Int
 }
 
 input CreateGameInput {
@@ -184,7 +184,7 @@ type Mutation {
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   createSkin(data: CreateSkinInput!): Skin!
   createUser(data: CreateUserInput!): User!
-  deleteGame(id: Int!): Game!
+  deleteGame(id: ID!): Game!
   deleteLevel(id: Int!): Level!
   deleteSkin(id: ID!): Skin!
   deleteUser(id: ID!): User!
@@ -198,23 +198,24 @@ type Mutation {
   toggleFavorite(input: ToggleFavoriteInput!): Boolean!
   toggleFriendActive(input: ToggleFriendActiveInput!): Friend!
   updateFriendStatus(input: UpdateFriendStatusInput!): Friend!
-  updateGame(id: Int!, input: UpdateGameInput!): Game!
+  updateGame(id: ID!, input: UpdateGameInput!): Game!
 }
 
 type Query {
-  game(id: Int!): Game!
+  game(id: ID!): Game!
   games: [Game!]!
   globalLeaderboard: Leaderboard!
-  leaderboard(gameId: Int!): Leaderboard!
+  leaderboard(gameId: ID!): Leaderboard!
   level(id: Int!): Level!
   levels: [Level!]!
   messages(chatId: ID!): [ChatMessage!]!
   myFriends(userId: ID!): [Friend!]!
   skin(id: ID!): Skin!
   skins: [Skin!]!
-  userFavorites(userId: Int!): [GameFavorite!]!
-  userGames(gameId: Int!, userId: Int!): [GameHistory!]!
+  userFavorites(userId: ID!): [GameFavorite!]!
+  userGames(gameId: ID!, userId: ID!): [GameHistory!]!
   userSkins: [UserSkin!]!
+  userStats(gameId: ID!, userId: ID!): UserStats!
   users: [User!]!
 }
 
@@ -223,6 +224,7 @@ input RegisterInput {
   email: String!
   lastname: String!
   name: String!
+  nickname: String!
   password: String!
   username: String!
 }
@@ -319,4 +321,17 @@ type UserSkin {
   skinId: String!
   user: User
   userId: String!
+}
+
+type UserStats {
+  averageScore: Int!
+  avgPerDay: Float!
+  bestStreak: Int!
+  highScore: Int!
+  totalDraws: Int!
+  totalGames: Int!
+  totalLosses: Int!
+  totalTime: String!
+  totalWins: Int!
+  winRate: Float!
 }

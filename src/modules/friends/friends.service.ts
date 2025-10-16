@@ -18,7 +18,7 @@ export class FriendsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bus: ObservableService,
-  ) {}
+  ) { }
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
@@ -41,7 +41,7 @@ export class FriendsService {
       where: {
         OR: [
           { requesterId: input.requesterId, receiverId: receiver.id },
-          { requesterId: receiver.id,       receiverId: input.requesterId },
+          { requesterId: receiver.id, receiverId: input.requesterId },
         ],
       },
     });
@@ -60,9 +60,9 @@ export class FriendsService {
     const inviter = await this.prisma.user.findUnique({ where: { id: input.inviterId } });
     if (!inviter) throw new NotFoundException('Inviter no existe');
 
-    let targetUserId: string | undefined;
-    if (input.targetUsername) {
-      const target = await this.prisma.user.findUnique({ where: { username: input.targetUsername } });
+    let targetUserId: string | null = null;
+    if (input.targetUsername !== undefined && input.targetUsername !== null) {
+      const target = await this.prisma.user.findUnique({ where: { username: input.targetUsername }, select: { id: true } });
       if (!target) throw new NotFoundException('Username objetivo no existe');
       if (target.id === inviter.id) throw new BadRequestException('No podés invitarte a vos mismo');
       targetUserId = target.id;
@@ -101,7 +101,7 @@ export class FriendsService {
       where: {
         OR: [
           { requesterId: invite.inviterId, receiverId: receiver.id },
-          { requesterId: receiver.id,       receiverId: invite.inviterId },
+          { requesterId: receiver.id, receiverId: invite.inviterId },
         ],
       },
     });
@@ -112,9 +112,21 @@ export class FriendsService {
         data: { usedAt: new Date(), usedById: receiver.id },
       });
 
-      if (existing) return existing;
+      if (existing) {
+        // Aseguramos el chat por si la relación ya existía y no tenía chat
+        const existingChat = await tx.chat.findFirst({ where: { friendId: existing.id } });
+        if (!existingChat) {
+          await tx.chat.create({
+            data: {
+              userId: receiver.id,
+              friendId: existing.id,
+            },
+          });
+        }
+        return existing;
+      }
 
-      const friend = await tx.friend.create({
+      const $friend = await tx.friend.create({
         data: {
           requesterId: invite.inviterId,
           receiverId: receiver.id,
@@ -123,23 +135,46 @@ export class FriendsService {
         },
       });
 
-      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: friend.id, userId: invite.inviterId } });
-      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: friend.id, userId: receiver.id } });
+      // creamos el chat si no existe
+      await tx.chat.create({
+        data: {
+          userId: invite.inviterId,
+          friendId: $friend.id,     // clave: referencia a la relación
+        },
+      });
 
-      return friend;
+      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: $friend.id, userId: invite.inviterId } });
+      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: $friend.id, userId: receiver.id } });
+
+      return $friend;
     });
   }
 
-  // --- otros helpers
+  // Actualizar estado (aceptar/rechazar)
   async updateStatus(input: UpdateFriendStatusInput): Promise<PrismaFriend> {
     const next = await this.prisma.friend.update({
       where: { id: input.id },
       data: { status: input.status },
     });
+    // Si pasó a ACCEPTED, asegurar chat
+    if (input.status === 'ACCEPTED') {
+      await this.prisma.$transaction(async (tx) => {
+        const exists = await tx.chat.findFirst({ where: { friendId: next.id } });
+        if (!exists) {
+          await tx.chat.create({
+            data: {
+              userId: next.requesterId,
+              friendId: next.id,
+            },
+          });
+        }
+      });
+    }
     this.bus.notify({ type: 'notification', data: { type: 'friend:status', entity: next.id, status: next.status, userId: next.receiverId } });
     return next;
   }
 
+  // actualizar estado (aceptar/ rechazar/ bloquear)
   async toggleActive(input: ToggleFriendActiveInput): Promise<PrismaFriend> {
     const next = await this.prisma.friend.update({
       where: { id: input.id },
@@ -149,9 +184,17 @@ export class FriendsService {
     return next;
   }
 
+  // Eliminar amigo
   async remove(id: string): Promise<boolean> {
     await this.prisma.friend.delete({ where: { id } });
+    // Borramos el chat 
+    await this.prisma.$transaction(async (tx) => {
+      const chat = await tx.chat.findFirst({ where: { friendId: id } });
+      if (chat) await tx.chat.delete({ where: { id: chat.id } });
+    });
+    // Notificamos
     this.bus.notify({ type: 'notification', data: { type: 'friend:removed', entity: id } });
+    this.bus.notify({ type: 'notification', data: { type: 'chat:removed', entity: id } });
     return true;
   }
 }

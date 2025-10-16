@@ -1,10 +1,14 @@
 import { InputType, Field, ID } from '@nestjs/graphql';
+import { IsUUID, IsString, IsNotEmpty } from 'class-validator';
 
 @InputType()
 export class AcceptFriendInviteInput {
-  @Field()
-  token!: string; // token claro del URL
+  @Field(() => String)
+  @IsString()
+  @IsNotEmpty()
+  token: string; // token claro del URL
 
   @Field(() => ID)
-  receiverId!: string;
+  @IsUUID()
+  receiverId: string;
 }

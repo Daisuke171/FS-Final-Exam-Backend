@@ -1,3 +1,5 @@
+---
+```graphql
 mutation CreateUser {
     createUser(
         data: {
@@ -6,7 +8,7 @@ mutation CreateUser {
             password: "Asd1234!"
             name: "test"
             lastname: "test"
-            birthday: "1999-05-08T00:00:00.000Z" 
+            birthday: "1999-05-08T00:00:00Z" 
             levelId: 1,
             username: "yam_user"
         }
@@ -22,3 +24,5 @@ mutation CreateUser {
         updatedAt
     }
 }
+```
+---

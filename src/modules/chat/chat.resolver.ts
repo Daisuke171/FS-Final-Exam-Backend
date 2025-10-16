@@ -1,7 +1,9 @@
 import { Resolver, Query, Mutation, Args, ID, Subscription } from '@nestjs/graphql';
 import { ChatService } from './chat.service';
-import { ChatMessage } from './models/chat-message.model'; // tu clase GraphQL del mensaje
+import { ChatMessage } from './models/chat-message.model'; 
+import { Chat } from './models/chat.model'; 
 import { SendMessageInput } from './dto/send-message.input';
+import { CreateChatFriendInput } from './dto/create-chat-friend.input';
 import { PubSub } from 'graphql-subscriptions';
 
 const pubSub = new PubSub();
