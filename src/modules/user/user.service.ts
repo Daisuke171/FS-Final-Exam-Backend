@@ -146,4 +146,13 @@ export class UserService {
 
     return user;
   }
+
+  async getMe(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        level: true,
+      },
+    });
+  }
 }

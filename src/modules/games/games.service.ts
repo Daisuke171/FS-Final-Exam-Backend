@@ -112,11 +112,11 @@ export class GamesService {
     });
   }
 
-  async getUserGameHistory(userId: string, gameId: string) {
+  async getUserGameHistory(userId: string, gameId?: string) {
     return this.prisma.gameHistory.findMany({
       where: {
         userId,
-        gameId,
+        ...(gameId && { gameId }),
       },
       orderBy: {
         createdAt: 'desc',
@@ -124,6 +124,7 @@ export class GamesService {
       include: {
         game: true,
       },
+      take: 10,
     });
   }
 
