@@ -175,6 +175,7 @@ type Leaderboard {
 
 type LeaderboardEntry {
   bestScore: Int!
+  level: Int!
   name: String
   nickname: String!
   rank: Int!
