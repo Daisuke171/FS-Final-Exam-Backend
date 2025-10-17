@@ -138,7 +138,7 @@ type Game {
   minPlayers: Int!
   name: String!
   rules: String
-  score: Float!
+  score: Int!
   updatedAt: DateTime!
 }
 
@@ -148,6 +148,7 @@ type GameFavorite {
   gameId: ID!
   id: ID!
   updatedAt: DateTime!
+  user: User
   userId: ID!
 }
 
@@ -161,6 +162,7 @@ type GameHistory {
   state: String!
   totalDamage: Int!
   updatedAt: DateTime!
+  user: User
   userId: ID!
 }
 
@@ -173,6 +175,7 @@ type Leaderboard {
 
 type LeaderboardEntry {
   bestScore: Int!
+  level: Int!
   name: String
   nickname: String!
   rank: Int!
@@ -236,15 +239,16 @@ type Query {
   leaderboard(gameId: ID!): Leaderboard!
   level(id: Int!): Level!
   levels: [Level!]!
+  me(userId: ID!): User!
   messages(chatId: ID!): [ChatMessage!]!
   myActiveCalls: [Call!]!
   myFriends(userId: ID!): [Friend!]!
   skin(id: ID!): Skin!
   skins: [Skin!]!
   userFavorites(userId: ID!): [GameFavorite!]!
-  userGames(gameId: ID!, userId: ID!): [GameHistory!]!
+  userGames(gameId: ID, userId: ID!): [GameHistory!]!
   userSkins: [UserSkin!]!
-  userStats(gameId: ID!, userId: ID!): UserStats!
+  userStats(gameId: ID, userId: ID!): UserStats!
   users: [User!]!
 }
 
@@ -325,20 +329,25 @@ input UpdateGameInput {
 type User {
   birthday: DateTime!
   chats: [String!]!
+  coins: Float!
   createdAt: DateTime!
   email: String!
   experience: Float!
+  experienceToNextLevel: Int!
   friends: [String!]!
   gameFavorites: [String!]!
   gameHistory: [String!]!
-  id: String!
+  id: ID!
   lastname: String!
   level: Level!
   levelId: Int!
+  levelProgress: Float!
   name: String!
+  nextLevelExperience: Int
   nickname: String
   notifications: [String!]!
-  skins: [String!]!
+  skins: [String!]
+  totalScore: Int!
   updatedAt: DateTime!
   username: String!
 }
