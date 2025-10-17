@@ -148,11 +148,17 @@ export class UserService {
   }
 
   async getMe(userId: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         level: true,
       },
     });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    return user;
   }
 }

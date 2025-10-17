@@ -28,8 +28,8 @@ export class UserResolver {
   }
 
   @Query(() => User)
-  async me(@Args('userId') userId: string) {
-    return await this.userService.getMe(userId);
+  async me(@Args('userId', { type: () => ID }) userId: string) {
+    return this.userService.getMe(userId);
   }
 
   // === RESOLVER FIELDS ===

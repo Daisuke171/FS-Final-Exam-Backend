@@ -2,10 +2,9 @@ import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { LevelService } from './level.service';
 import { Level, CreateManyResult } from './models/level.model';
 import { CreateLevelInput } from './create-level.input';
-import { NotFoundException } from '@nestjs/common';
 @Resolver(() => Level)
 export class LevelResolver {
-  constructor(private readonly levelService: LevelService) { }
+  constructor(private readonly levelService: LevelService) {}
 
   // Queries
   @Query(() => [Level], { name: 'levels' })
@@ -31,7 +30,6 @@ export class LevelResolver {
     const count = await this.levelService.createMany(data);
     return { count };
   }
-
 
   @Mutation(() => Level)
   deleteLevel(@Args('id', { type: () => Int }) id: number) {
