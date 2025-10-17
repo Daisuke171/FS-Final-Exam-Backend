@@ -29,7 +29,7 @@ export class UserResolver {
 
   @Query(() => User)
   async me(@Args('userId') userId: string) {
-    return this.userService.getMe(userId);
+    return await this.userService.getMe(userId);
   }
 
   // === RESOLVER FIELDS ===
