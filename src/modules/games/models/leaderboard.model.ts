@@ -24,6 +24,9 @@ export class LeaderboardEntry {
   totalGames: number;
 
   @Field(() => Int)
+  level: number;
+
+  @Field(() => Int)
   wins: number;
 }
 
