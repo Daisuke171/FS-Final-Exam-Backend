@@ -28,7 +28,7 @@ export class UserResolver {
   }
 
   @Query(() => User)
-  async me(@Args('userId') userId: string) {
+  async me(@Args('userId', { type: () => ID }) userId: string) {
     return this.userService.getMe(userId);
   }
 
