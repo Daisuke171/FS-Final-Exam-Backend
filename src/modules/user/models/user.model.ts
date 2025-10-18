@@ -1,3 +1,4 @@
+import { UserSkin } from '@modules/user-skins/models/user-skin.model';
 import { Field, Float, ID, Int, ObjectType } from '@nestjs/graphql';
 import { Level } from 'src/modules/level/models/level.model';
 
@@ -34,8 +35,8 @@ export class User {
   nickname: string | null;
 
   // ¡¡Se esta usando string porque todavía no están los modelos
-  @Field(() => [String], { nullable: true })
-  skins?: string[];
+  @Field(() => [UserSkin], { nullable: true })
+  skins?: UserSkin[];
 
   @Field(() => [String])
   friends: string[];
