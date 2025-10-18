@@ -13,6 +13,9 @@ import { UserService } from './user.service';
 import { User } from './models/user.model';
 import { CreateUserInput } from './create-user.input';
 import { PrismaService } from 'prisma/prisma.service';
+import { SkinWithStatus } from './models/skin-with-status.model';
+// import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
+import { UserSkin } from '@modules/user-skins/models/user-skin.model';
 
 @Resolver(() => User)
 export class UserResolver {
@@ -31,6 +34,18 @@ export class UserResolver {
   async me(@Args('userId', { type: () => ID }) userId: string) {
     return this.userService.getMe(userId);
   }
+
+  @Query(() => [SkinWithStatus])
+  async userSkinsWithStatus(
+    @Args('userId', { type: () => ID }) userId: string,
+  ) {
+    return this.userService.getUserSkinsWithStatus(userId);
+  }
+
+  // @Query(() => [SkinWithStatus])
+  // async userSkinsWithStatus(@CurrentUser() user: User) {
+  //   return this.userService.getUserSkinsWithStatus(user.id);
+  // }
 
   // === RESOLVER FIELDS ===
 
@@ -103,4 +118,22 @@ export class UserResolver {
   deleteUser(@Args('id', { type: () => ID }) id: string) {
     return this.userService.delete(id);
   }
+
+  @Mutation(() => UserSkin)
+  async activateSkin(
+    @Args('skinId', { type: () => ID }) skinId: string,
+    @Args('userId', { type: () => ID }) userId: string,
+  ) {
+    const result = await this.userService.activateSkin(userId, skinId);
+    return result[1]; // Retorna el skin activado de la transacción
+  }
+
+  // @Mutation(() => UserSkin)
+  // async activateSkin(
+  //   @Args('skinId', { type: () => ID }) skinId: string,
+  //   @CurrentUser() user: User,
+  // ) {
+  //   const result = await this.userService.activateSkin(user.id, skinId);
+  //   return result[1]; // Retorna el skin activado de la transacción
+  // }
 }
