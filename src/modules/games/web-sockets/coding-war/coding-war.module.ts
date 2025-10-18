@@ -7,4 +7,4 @@ import { CWGateway } from './gateway/coding-war.gateway';
   providers: [CWGateway, CWService],
   imports: [GamesModule],
 })
-export class RpsModule {}
+export class CodingWarModule {}
