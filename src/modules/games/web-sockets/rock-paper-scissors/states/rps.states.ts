@@ -473,26 +473,46 @@ export class FinishedState extends GameState {
     const duration = Math.floor((Date.now() - game.startTime) / 1000);
 
     const userId1 =
-      game.playerUserIds.get(p1) || '4cf608e1-0c2c-46ea-a2bb-04a42d56f7e1';
+      game.playerUserIds.get(p1) || '0ec555ce-7c6a-484a-a8b8-799aa011164a';
     const userId2 =
-      game.playerUserIds.get(p2) || '79176965-f4a8-40e3-a8af-007cc296085e';
+      game.playerUserIds.get(p2) || '3d0ef120-1a72-460e-b8d5-035344d72674';
+
+    const gameId = 'e3163526-32ee-423a-9747-80cea7a00dc9';
+    const maxHp = 100;
+    let player1Score: number | null = null;
+    let player2Score: number | null = null;
 
     try {
+      player1Score = this.calculateScore(
+        hp1,
+        hp2,
+        game.history.length,
+        winner === p1,
+        maxHp,
+      );
+
+      player2Score = this.calculateScore(
+        hp2,
+        hp1,
+        game.history.length,
+        winner === p2,
+        maxHp,
+      );
       await gamesApiService.saveGameResult({
         userId: userId1,
-        gameId: userId2,
+        gameId: gameId,
         duration,
         state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
-        score: this.calculateScore(hp1, game.history.length, winner === p1),
+        score: player1Score,
         totalDamage: game.damageDealt.get(p1) || 0,
       });
 
       await gamesApiService.saveGameResult({
-        userId: '4cf608e1-0c2c-46ea-a2bb-04a42d56f7e1',
-        gameId: '79176965-f4a8-40e3-a8af-007cc296085e',
+        userId: userId2,
+        gameId: gameId,
         duration,
         state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
-        score: this.calculateScore(hp2, game.history.length, winner === p2),
+        score: player2Score,
         totalDamage: game.damageDealt.get(p2) || 0,
       });
     } catch (error) {
@@ -505,17 +525,52 @@ export class FinishedState extends GameState {
         [p2]: hp2,
       },
       totalRounds: game.history.length,
+      scores: {
+        [p1]: player1Score,
+        [p2]: player2Score,
+      },
     });
   }
 
-  private calculateScore(hp: number, rounds: number, won: boolean): number {
-    if (!won && hp <= 0) return 0;
+  private calculateScore(
+    playerHp: number,
+    opponentHp: number,
+    rounds: number,
+    won: boolean,
+    maxHp: number = 100,
+  ): number {
+    const playerHpPercent = (playerHp / maxHp) * 100; // 0-100%
+    const opponentHpPercent = (opponentHp / maxHp) * 100; // 0-100%
+    const damageDealtPercent = 100 - opponentHpPercent; // 0-100%
 
-    const baseScore = hp * 10;
-    const roundBonus = Math.max(0, 100 - rounds * 10);
-    const winBonus = won ? 200 : 0;
+    if (won) {
+      // VICTORIA: HP restante + velocidad + bonus
+      const hpScore = (playerHpPercent / 100) * 30; // 0-30 puntos
+      const speedScore = Math.max(0, 15 - rounds); // 0-15 puntos
+      const winBonus = 5; // 5 puntos fijos
 
-    return baseScore + roundBonus + winBonus;
+      const totalScore = hpScore + speedScore + winBonus;
+      return Math.min(50, Math.round(totalScore));
+    } else {
+      // DERROTA: Daño infligido + resistencia
+      const damageScore = (damageDealtPercent / 100) * 25; // 0-25 puntos
+      const resistanceScore = Math.max(0, 10 - Math.floor(rounds / 2)); // 0-10 puntos
+
+      // Sin penalización si hiciste más del 50% de daño
+      if (damageDealtPercent >= 50) {
+        const totalScore = damageScore + resistanceScore;
+        return Math.round(totalScore); // 0-35 puntos
+      }
+
+      // Ligera penalización si hiciste algo de daño
+      if (damageDealtPercent > 0) {
+        const totalScore = damageScore + resistanceScore - 5;
+        return Math.max(-5, Math.round(totalScore)); // -5 a 30 puntos
+      }
+
+      // Penalización fuerte si no hiciste nada de daño
+      return Math.max(-50, -20 - rounds * 2);
+    }
   }
   handleJoin() {}
   handleMove() {}
