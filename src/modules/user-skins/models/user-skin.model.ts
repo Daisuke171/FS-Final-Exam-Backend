@@ -14,7 +14,7 @@ export class UserSkin {
   skinId!: string;
 
   @Field()
-  equipped!: boolean;
+  active!: boolean;
 
   @Field()
   acquiredAt!: Date;
