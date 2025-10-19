@@ -11,6 +11,7 @@ import { UserSkinModule } from './modules/user-skins/user-skins.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { CommonModule } from './common/common.module';
+import { CodingWarModule } from './modules/games/web-sockets/coding-war/coding-war.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CommonModule } from './common/common.module';
     UploadsModule,
     ChatModule,
     CommonModule,
+    CodingWarModule,
   ],
   controllers: [],
   providers: [],
