@@ -2,7 +2,7 @@ import { Field, Float, ID, Int, ObjectType } from '@nestjs/graphql';
 import { Level } from 'src/modules/level/models/level.model';
 
 @ObjectType()
-export class User {
+export class UserGraph {
   @Field(() => ID)
   id: string;
 

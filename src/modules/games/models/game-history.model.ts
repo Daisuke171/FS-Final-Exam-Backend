@@ -1,7 +1,7 @@
 import { ObjectType, Field, Int, ID } from '@nestjs/graphql';
 // import { User } from '../../users/models/user.model';
 import { Game } from './game.model';
-import { User } from 'src/modules/user/models/user.model';
+import { UserGraph } from 'src/modules/user/models/user.model';
 
 @ObjectType()
 export class GameHistory {
@@ -17,8 +17,8 @@ export class GameHistory {
   @Field(() => ID)
   userId: string;
 
-  @Field(() => User, { nullable: true })
-  user?: User;
+  @Field(() => UserGraph, { nullable: true })
+  user?: UserGraph;
 
   @Field(() => Int)
   duration: number;

@@ -1,11 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { User } from 'src/modules/user/models/user.model';
+import { UserInfo } from 'os';
+import { UserGraph } from 'src/modules/user/models/user.model';
 
 @ObjectType()
 export class AuthResponse {
   @Field()
   accessToken!: string;
 
-  @Field(() => User)
-  user!: User;
+  @Field(() => UserGraph)
+  user!: UserGraph;
 }
