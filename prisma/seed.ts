@@ -5,6 +5,8 @@ import { CreateLevelInput } from '@modules/games/web-sockets/rock-paper-scissors
 // ========================================================================================
 // ========================================================================================
 // Esta seed crea 30 levels, 10 usuarios, 2 juegos y 8 skins. Úsenla para testear la app ;).
+
+// COMANDO: Pnpm seed
 // ========================================================================================
 // ========================================================================================
 
@@ -476,7 +478,7 @@ async function main() {
       name: user.name,
       lastname: user.lastname,
       birthday: new Date(user.birthday),
-      levelId: 1,
+      level: { connect: { atomicNumber: 1 } },
     };
 
     const createdUser = await prisma.user.upsert({
