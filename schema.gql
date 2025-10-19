@@ -1,0 +1,318 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Skin {
+  id: ID!
+  name: String!
+  img: String!
+  level: Int!
+  value: Float!
+  users: [User]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type UserSkin {
+  id: ID!
+  userId: String!
+  skinId: String!
+  active: Boolean!
+  acquiredAt: DateTime!
+  user: User
+  skin: Skin
+}
+
+type User {
+  id: ID!
+  email: String!
+  username: String!
+  name: String!
+  lastname: String!
+  birthday: DateTime!
+  coins: Float!
+  levelId: Int!
+  level: Level!
+  nickname: String
+  skins: [UserSkin!]
+  friends: [String!]!
+  gameHistory: [String!]!
+  gameFavorites: [String!]!
+  notifications: [String!]!
+  chats: [String!]!
+  nextLevelExperience: Int
+  levelProgress: Float!
+  experienceToNextLevel: Int!
+  totalScore: Int!
+  experience: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Level {
+  id: Int!
+  experienceRequired: Int!
+  name: String!
+  atomicNumber: Int!
+  chemicalSymbol: String!
+  color: String!
+  users: [User!]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type CreateManyResult {
+  count: Int!
+}
+
+type SkinWithStatus {
+  id: ID!
+  name: String!
+  img: String!
+  level: Int!
+  isUnlocked: Boolean!
+  isOwned: Boolean!
+  isActive: Boolean!
+  userSkinId: ID
+}
+
+type LevelUpResponse {
+  user: User!
+  leveledUp: Boolean!
+  previousLevel: Int!
+  newLevel: Int!
+  unlockedSkins: [Skin!]!
+}
+
+type GameHistory {
+  id: ID!
+  gameId: ID!
+  game: Game
+  userId: ID!
+  user: User
+  duration: Int!
+  state: String!
+  score: Int!
+  totalDamage: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type GameFavorite {
+  id: ID!
+  gameId: ID!
+  game: Game
+  userId: ID!
+  user: User
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Game {
+  id: ID!
+  name: String!
+  description: String
+  rules: String
+  gameLogo: String
+  score: Int!
+  duration: String!
+  category: String!
+  minPlayers: Int!
+  maxPlayers: Int!
+  history: [GameHistory]!
+  favorite: [GameFavorite]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type LeaderboardEntry {
+  rank: Int!
+  userId: ID!
+  nickname: String!
+  name: String
+  totalScore: Int!
+  bestScore: Int!
+  totalGames: Int!
+  level: Int!
+  wins: Int!
+}
+
+type Leaderboard {
+  gameId: ID!
+  gameName: String!
+  entries: [LeaderboardEntry!]!
+  generatedAt: DateTime!
+}
+
+type UserStats {
+  winRate: Float!
+  totalTime: String!
+  highScore: Int!
+  bestStreak: Int!
+  avgPerDay: Float!
+  totalGames: Int!
+  totalWins: Int!
+  totalLosses: Int!
+  totalDraws: Int!
+  averageScore: Int!
+}
+
+type AuthResponse {
+  accessToken: String!
+  user: User!
+}
+
+type ChatMessage {
+  id: ID!
+  chatId: ID!
+  senderId: ID!
+  message: String!
+  status: String!
+  read: Boolean!
+  timestamp: DateTime!
+}
+
+type Query {
+  games: [Game!]!
+  game(id: ID!): Game!
+  userGames(userId: ID!, gameId: ID): [GameHistory!]!
+  leaderboard(gameId: ID!): Leaderboard!
+  globalLeaderboard: Leaderboard!
+  userStats(userId: ID!, gameId: ID): UserStats!
+  userFavorites(userId: ID!): [GameFavorite!]!
+  users: [User!]!
+  me(userId: ID!): User!
+  userWithLevel(userId: ID!): User!
+  userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
+  levels: [Level!]!
+  level(id: Int!): Level!
+  skins: [Skin!]!
+  skin(id: ID!): Skin!
+  userSkins: [UserSkin!]!
+  messages(chatId: ID!): [ChatMessage!]!
+}
+
+type Mutation {
+  toggleFavorite(input: ToggleFavoriteInput!): Boolean!
+  saveGameResult(input: SaveGameResultInput!): GameHistory!
+  createGame(input: CreateGameInput!): Game!
+  deleteGame(id: ID!): Game!
+  updateGame(id: ID!, input: UpdateGameInput!): Game!
+  createUser(data: CreateUserInput!): User!
+  deleteUser(id: ID!): User!
+  activateSkin(skinId: ID!, userId: ID!): UserSkin!
+  unlockSkins(userId: ID!): [Skin!]!
+  addExperience(experience: Int!, userId: ID!): LevelUpResponse!
+  createLevel(data: CreateLevelInput!): Level!
+  createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
+  deleteLevel(id: Int!): Level!
+  register(registerInput: RegisterInput!): User!
+  login(loginInput: LoginInput!): AuthResponse!
+  createSkin(data: CreateSkinInput!): Skin!
+  deleteSkin(id: ID!): Skin!
+  assignSkin(data: CreateUserSkinInput!): UserSkin!
+  sendMessage(input: SendMessageInput!): ChatMessage!
+  markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
+}
+
+input ToggleFavoriteInput {
+  userId: ID!
+  gameId: ID!
+}
+
+input SaveGameResultInput {
+  userId: ID!
+  gameId: ID!
+  duration: Int!
+  state: String!
+  score: Int!
+  totalDamage: Int!
+}
+
+input CreateGameInput {
+  name: String!
+  description: String!
+  rules: String!
+  gameLogo: String!
+  category: String!
+  score: Int!
+  duration: String!
+  maxPlayers: Int!
+  minPlayers: Int!
+}
+
+input UpdateGameInput {
+  name: String
+  description: String
+  rules: String
+  gameLogo: String
+  category: String
+  score: Int
+  duration: String
+  maxPlayers: Int
+  minPlayers: Int
+}
+
+input CreateUserInput {
+  name: String!
+  lastname: String!
+  username: String!
+  email: String!
+  nickname: String
+  password: String!
+  birthday: String!
+  levelId: Int!
+}
+
+input CreateLevelInput {
+  atomicNumber: Int!
+  name: String!
+  chemicalSymbol: String!
+  color: String!
+  experienceRequired: Int!
+}
+
+input RegisterInput {
+  email: String!
+  username: String!
+  nickname: String!
+  password: String!
+  name: String!
+  lastname: String!
+  birthday: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input CreateSkinInput {
+  name: String!
+  img: String!
+  level: Int!
+  value: Float!
+  userIds: [String!]
+}
+
+input CreateUserSkinInput {
+  userId: String!
+  skinId: String!
+  equipped: Boolean
+}
+
+input SendMessageInput {
+  chatId: ID!
+  senderId: ID!
+  message: String!
+}
+
+type Subscription {
+  messageAdded(chatId: ID!): ChatMessage!
+  messageUpdated(chatId: ID!): ChatMessage!
+}

@@ -1,6 +1,9 @@
 -- CreateEnum
 CREATE TYPE "FriendStatus" AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED', 'BLOCKED');
 
+-- CreateEnum
+CREATE TYPE "CallStatus" AS ENUM ('RINGING', 'ACCEPTED', 'REJECTED', 'ENDED');
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
@@ -196,6 +199,20 @@ CREATE TABLE "colors" (
     CONSTRAINT "colors_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "calls" (
+    "id" TEXT NOT NULL,
+    "caller_id" TEXT NOT NULL,
+    "callee_id" TEXT NOT NULL,
+    "status" "CallStatus" NOT NULL DEFAULT 'RINGING',
+    "sdp_offer" TEXT,
+    "sdp_answer" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "calls_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -204,6 +221,12 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_nickname_key" ON "users"("nickname");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "skins_name_key" ON "skins"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "levels_atomic_number_key" ON "levels"("atomic_number");
 
 -- CreateIndex
 CREATE INDEX "friends_requesterId_idx" ON "friends"("requesterId");
@@ -228,6 +251,21 @@ CREATE INDEX "friend_invites_targetUserId_idx" ON "friend_invites"("targetUserId
 
 -- CreateIndex
 CREATE INDEX "friend_invites_expiresAt_idx" ON "friend_invites"("expiresAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "games_name_key" ON "games"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "chats_friend_id_key" ON "chats"("friend_id");
+
+-- CreateIndex
+CREATE INDEX "calls_caller_id_idx" ON "calls"("caller_id");
+
+-- CreateIndex
+CREATE INDEX "calls_callee_id_idx" ON "calls"("callee_id");
+
+-- CreateIndex
+CREATE INDEX "calls_status_idx" ON "calls"("status");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_level_id_fkey" FOREIGN KEY ("level_id") REFERENCES "levels"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -279,3 +317,9 @@ ALTER TABLE "rooms" ADD CONSTRAINT "rooms_game_id_fkey" FOREIGN KEY ("game_id") 
 
 -- AddForeignKey
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "calls" ADD CONSTRAINT "calls_caller_id_fkey" FOREIGN KEY ("caller_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "calls" ADD CONSTRAINT "calls_callee_id_fkey" FOREIGN KEY ("callee_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -49,7 +49,7 @@ export class AuthService {
           name: 'Principiante',
           atomicNumber: 0,
           color: '#000000',
-          chemicalSymbol: "Ni"
+          chemicalSymbol: 'Ni',
         },
       });
     }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Game, RoomConfig, WaitingState } from './states/rps.states';
 import { GamesService } from '@modules/games/games.service';
+import { UserService } from '@modules/user/user.service';
 
 @Injectable()
 export class RpsService {
@@ -10,12 +11,14 @@ export class RpsService {
     roomId: string,
     roomConfig: RoomConfig,
     gamesApiService: GamesService,
+    usersService: UserService,
   ): Game {
     const game = new Game(
       roomId,
       roomConfig,
       new WaitingState(),
       gamesApiService,
+      usersService,
     );
     this.games.set(roomId, game);
     console.log(`Juego creado en sala: ${roomId}`);

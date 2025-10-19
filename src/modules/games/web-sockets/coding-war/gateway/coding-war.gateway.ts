@@ -286,6 +286,56 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('gameState', stateData);
   }
 
+  // === Real-time typing sync ===
+  @SubscribeMessage('typingProgress')
+  handleTypingProgress(
+    @MessageBody() data: { roomId: string; lineIndex: number; input: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      // Broadcast to others in the room
+      client.to(data.roomId).emit('typingUpdate', {
+        playerId: client.id,
+        lineIndex: data.lineIndex,
+        input: data.input,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  @SubscribeMessage('lineCommit')
+  handleLineCommit(
+    @MessageBody()
+    data: {
+      roomId: string;
+      lineIndex: number;
+      input: string; // final input for the committed line
+      isPerfect?: boolean;
+      score?: number;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      // Update authoritative score if provided
+      if (typeof data.score === 'number' && !Number.isNaN(data.score)) {
+        game.addScore(client.id, data.score);
+      }
+      client.to(data.roomId).emit('lineCommitted', {
+        playerId: client.id,
+        lineIndex: data.lineIndex,
+        input: data.input,
+        isPerfect: data.isPerfect ?? false,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
   private buildStateData(game: Game): StateProps {
     const stateData: StateProps = {
       state: game.getCurrentState(),
