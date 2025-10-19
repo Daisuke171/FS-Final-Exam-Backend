@@ -2,17 +2,18 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type User {
-  id: String!
+type UserGraph {
+  id: ID!
   email: String!
   username: String!
   name: String!
   lastname: String!
   birthday: DateTime!
+  coins: Float!
   levelId: Int!
   level: Level!
   nickname: String
-  skins: [String!]!
+  skins: [String!]
   friends: [String!]!
   gameHistory: [String!]!
   gameFavorites: [String!]!
@@ -27,11 +28,6 @@ type User {
   updatedAt: DateTime!
 }
 
-"""
-A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
-"""
-scalar DateTime
-
 type Level {
   id: Int!
   experienceRequired: Int!
@@ -39,7 +35,7 @@ type Level {
   atomicNumber: Int!
   chemicalSymbol: String!
   color: String!
-  users: [User!]
+  users: [UserGraph!]
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -48,12 +44,31 @@ type CreateManyResult {
   count: Int!
 }
 
+type SkinWithStatus {
+  id: ID!
+  name: String!
+  img: String!
+  level: Int!
+  isUnlocked: Boolean!
+  isOwned: Boolean!
+  isActive: Boolean!
+  userSkinId: ID
+}
+
+type LevelUpResponse {
+  user: User!
+  leveledUp: Boolean!
+  previousLevel: Int!
+  newLevel: Int!
+  unlockedSkins: [Skin!]!
+}
+
 type GameHistory {
   id: ID!
   gameId: ID!
   game: Game
   userId: ID!
-  user: User
+  user: UserGraph
   duration: Int!
   state: String!
   score: Int!
@@ -67,7 +82,7 @@ type GameFavorite {
   gameId: ID!
   game: Game
   userId: ID!
-  user: User
+  user: UserGraph
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -97,6 +112,7 @@ type LeaderboardEntry {
   totalScore: Int!
   bestScore: Int!
   totalGames: Int!
+  level: Int!
   wins: Int!
 }
 
@@ -122,7 +138,7 @@ type UserStats {
 
 type AuthResponse {
   accessToken: String!
-  user: User!
+  user: UserGraph!
 }
 
 type Skin {
@@ -131,7 +147,7 @@ type Skin {
   img: String!
   level: Int!
   value: Float!
-  users: [User]
+  users: [UserGraph]
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -142,7 +158,7 @@ type UserSkin {
   skinId: String!
   equipped: Boolean!
   acquiredAt: DateTime!
-  user: User
+  user: UserGraph
   skin: Skin
 }
 
@@ -159,15 +175,19 @@ type ChatMessage {
 type Query {
   games: [Game!]!
   game(id: ID!): Game!
-  userGames(userId: ID!, gameId: ID!): [GameHistory!]!
+  userGames(userId: ID!, gameId: ID): [GameHistory!]!
   leaderboard(gameId: ID!): Leaderboard!
   globalLeaderboard: Leaderboard!
-  userStats(userId: ID!, gameId: ID!): UserStats!
+  userStats(userId: ID!, gameId: ID): UserStats!
   userFavorites(userId: ID!): [GameFavorite!]!
+  users: [User!]!
+  me(userId: ID!): User!
+  userWithLevel(userId: ID!): User!
+  userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
   levels: [Level!]!
   level(id: Int!): Level!
-  users: [User!]!
-  me(userId: String!): User!
+  users: [UserGraph!]!
+  me(userId: ID!): UserGraph!
   skins: [Skin!]!
   skin(id: ID!): Skin!
   userSkins: [UserSkin!]!
@@ -180,12 +200,16 @@ type Mutation {
   createGame(input: CreateGameInput!): Game!
   deleteGame(id: ID!): Game!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
+  createUser(data: CreateUserInput!): User!
+  deleteUser(id: ID!): User!
+  activateSkin(skinId: ID!, userId: ID!): UserSkin!
+  unlockSkins(userId: ID!): [Skin!]!
+  addExperience(experience: Int!, userId: ID!): LevelUpResponse!
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   deleteLevel(id: Int!): Level!
-  createUser(data: CreateUserInput!): User!
-  deleteUser(id: ID!): User!
-  register(registerInput: RegisterInput!): User!
+  createUser(data: CreateUserInput!): UserGraph!
+  deleteUser(id: ID!): UserGraph!
   login(loginInput: LoginInput!): AuthResponse!
   createSkin(data: CreateSkinInput!): Skin!
   deleteSkin(id: ID!): Skin!
@@ -232,14 +256,6 @@ input UpdateGameInput {
   minPlayers: Int
 }
 
-input CreateLevelInput {
-  atomicNumber: Int!
-  name: String!
-  chemicalSymbol: String!
-  color: String!
-  experienceRequired: Int!
-}
-
 input CreateUserInput {
   name: String!
   lastname: String!
@@ -251,18 +267,8 @@ input CreateUserInput {
   levelId: Int!
 }
 
-input RegisterInput {
-  email: String!
-  username: String!
-  nickname: String!
-  password: String!
-  name: String!
-  lastname: String!
-  birthday: String!
-}
-
 input LoginInput {
-  email: String!
+  usernameOrEmail: String!
   password: String!
 }
 

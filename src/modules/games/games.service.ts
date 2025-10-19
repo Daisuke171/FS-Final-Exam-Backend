@@ -309,12 +309,19 @@ export class GamesService {
     const totalDraws = games.filter((g) => g.state === 'draw').length;
     const winRate = (totalWins / totalGames) * 100;
 
-    // Tiempo total jugado (en minutos)
-    const totalMinutes = games.reduce((sum, g) => sum + g.duration, 0);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    const totalTime = `${hours}h ${minutes}m`;
+    const totalSeconds = games.reduce((sum, g) => sum + g.duration, 0);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
 
+    let totalTime = '';
+    if (hours > 0) {
+      totalTime = `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      totalTime = `${minutes}m ${seconds}s`;
+    } else {
+      totalTime = `${seconds}s`;
+    }
     // Mejor puntuación
     const highScore = Math.max(...games.map((g) => g.score));
 

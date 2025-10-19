@@ -8,7 +8,11 @@ import { JwtService } from '@nestjs/jwt';
 import { RegisterInput } from './inputs/register.input';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'prisma/prisma.service';
-import { User as PrismaUser, Level } from '@prisma/client';
+import { User as PrismaUser, Level, User } from '@prisma/client';
+import { UserGraph } from 'src/modules/user/models/user.model'; // el de GraphQL
+import { UserService } from '../user/user.service';
+import { LoginInput } from '../auth/inputs/login.input';
+import { AuthResponse } from '../auth/responses/auth.response';
 
 type UserWithLevel = PrismaUser & { level: Level };
 
@@ -17,6 +21,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private readonly userService: UserService,
   ) {}
 
   async register(data: RegisterInput) {
@@ -82,27 +87,14 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string) {
-    const user = await this.validateUser(email, password);
+  async login(loginInput: LoginInput): Promise<AuthResponse> {
+    const { usernameOrEmail, password } = loginInput;
 
-    const payload = {
-      username: user.username,
-      sub: user.id,
-    };
+    //buscar email o username
+    const user = await this.userService.findByEmailOrUsername(usernameOrEmail);
 
-    return {
-      accessToken: this.jwtService.sign(payload),
-      user: {
-        ...user,
-        password: undefined,
-        skins: [],
-        friends: [],
-        gameHistory: [],
-        gameFavorites: [],
-        notifications: [],
-        chats: [],
-      },
-    };
+    const accessToken = this.jwtService.sign({ sub: user.id });
+    return { accessToken, user };
   }
 
   async validateUser(email: string, password: string): Promise<UserWithLevel> {

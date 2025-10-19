@@ -8,8 +8,9 @@ import {
 import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { CreateUserInput } from './create-user.input';
-import type { User } from '@prisma/client';
+import type { User, Skin } from '@prisma/client';
 import { Prisma } from '@prisma/client';
+import { UserGraph } from './models/user.model';
 
 @Injectable()
 export class UserService {
@@ -59,7 +60,8 @@ export class UserService {
       });
 
       // 4. Return user data without password
-      const { password: userPassword, ...userDataResponse } = user;
+      const { password: _userPassword, ...userDataResponse } = user;
+      void _userPassword;
       return userDataResponse;
     } catch (error: unknown) {
       if (
@@ -81,7 +83,8 @@ export class UserService {
       const user = await this.prisma.user.delete({
         where: { id: userId },
       });
-      const { password, ...userData } = user;
+      const { password: _password, ...userData } = user;
+      void _password;
       return userData;
     } catch (error: unknown) {
       if (
@@ -152,6 +155,11 @@ export class UserService {
       where: { id: userId },
       include: {
         level: true,
+        skins: {
+          include: {
+            skin: true,
+          },
+        },
       },
     });
 
@@ -160,5 +168,46 @@ export class UserService {
     }
 
     return user;
+  }
+
+  async findByEmailOrUsername(identifier: string): Promise<UserGraph> {
+    if (!identifier) {
+      throw new BadRequestException('Falta el email o username');
+    }
+
+    const normalized = identifier.trim().toLowerCase();
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: {equals: normalized, mode: 'insensitive' } },
+            { username: {equals:normalized, mode: 'insensitive' } }],
+      },
+      include: {
+        level: true,
+      },
+    });
+
+    console.log('Buscando usuario con:', normalized);
+    console.log('Resultado de búsqueda:', user);
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const { password, ...safeUser } = user;
+
+    return {
+      ...safeUser,
+      skins: [],
+      friends: [],
+      gameHistory: [],
+      gameFavorites: [],
+      notifications: [],
+      chats: [],
+      nextLevelExperience: 0,
+      levelProgress: 0,
+      experienceToNextLevel: 0,
+      totalScore: 0,
+    };
   }
 }

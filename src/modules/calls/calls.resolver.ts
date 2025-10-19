@@ -10,7 +10,7 @@ import { EndCallInput } from './dto/end-call.input';
 import { IceCandidateInput } from './dto/ice-candidate.input';
 import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
 import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
-import { User } from '@modules/user/models/user.model';
+import { UserGraph } from '@modules/user/models/user.model';
 
 
 const pubSub = new PubSub();
@@ -23,34 +23,34 @@ export class CallsResolver {
 
   // 🔸 Queries
   @Query(() => [Call])
-  myActiveCalls(@CurrentUser() user: User) {
+  myActiveCalls(@CurrentUser() user: UserGraph) {
     return this.calls.getActiveCallsByUser(user.id);
   }
 
   // 🔸 Mutations
   @Mutation(() => Call)
-  async startCall(@CurrentUser() user: User, @Args('calleeId', { type: () => ID }) calleeId: string, @Args('sdpOffer') sdpOffer: string) {
+  async startCall(@CurrentUser() user: UserGraph, @Args('calleeId', { type: () => ID }) calleeId: string, @Args('sdpOffer') sdpOffer: string) {
     const call = await this.calls.startCall({ callerId: user.id, calleeId, sdpOffer });
     await pubSub.publish(`call:ringing:${calleeId}`, { callRinging: call });
     return call;
   }
 
   @Mutation(() => Call)
-  async answerCall(@CurrentUser() user: User, @Args('input') input: AnswerCallInput) {
+  async answerCall(@CurrentUser() user: UserGraph, @Args('input') input: AnswerCallInput) {
     const call = await this.calls.answerCall({ ...input, calleeId: user.id });
     await pubSub.publish(`call:accepted:${call.id}`, { callAccepted: call });
     return call;
   }
 
   @Mutation(() => Call)
-  async rejectCall(@CurrentUser() user: User, @Args('callId', { type: () => ID }) callId: string) {
+  async rejectCall(@CurrentUser() user: UserGraph, @Args('callId', { type: () => ID }) callId: string) {
     const call = await this.calls.rejectCall({ callId, calleeId: user.id });
     await pubSub.publish(`call:rejected:${call.id}`, { callRejected: call });
     return call;
   }
 
   @Mutation(() => Call)
-  async endCall(@CurrentUser() user: User, @Args('callId', { type: () => ID }) callId: string) {
+  async endCall(@CurrentUser() user: UserGraph, @Args('callId', { type: () => ID }) callId: string) {
     const call = await this.calls.endCall({ callId, userId: user.id });
     await pubSub.publish(`call:ended:${call.id}`, { callEnded: call });
     return call;

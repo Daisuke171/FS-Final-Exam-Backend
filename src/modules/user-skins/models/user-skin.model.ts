@@ -1,5 +1,5 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { User } from '@modules/user/models/user.model';
+import { UserGraph } from '@modules/user/models/user.model';
 import { Skin } from '@modules/skins/models/skins.model';
 
 @ObjectType()
@@ -14,13 +14,13 @@ export class UserSkin {
   skinId!: string;
 
   @Field()
-  equipped!: boolean;
+  active!: boolean;
 
   @Field()
   acquiredAt!: Date;
 
-  @Field(() => User, { nullable: true })
-  user?: User;
+  @Field(() => UserGraph, { nullable: true })
+  user?: UserGraph;
 
   @Field(() => Skin, { nullable: true })
   skin?: Skin;
