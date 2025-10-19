@@ -314,12 +314,17 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       lineIndex: number;
       input: string; // final input for the committed line
       isPerfect?: boolean;
+      score?: number;
     },
     @ConnectedSocket() client: Socket,
   ) {
     try {
       const game = this.gameService.getGame(data.roomId);
       if (!game || !game.players.has(client.id)) return;
+      // Update authoritative score if provided
+      if (typeof data.score === 'number' && !Number.isNaN(data.score)) {
+        game.addScore(client.id, data.score);
+      }
       client.to(data.roomId).emit('lineCommitted', {
         playerId: client.id,
         lineIndex: data.lineIndex,
