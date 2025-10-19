@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { RegisterInput } from './inputs/register.input';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'prisma/prisma.service';
-import { User as PrismaUser, Level, User } from '@prisma/client';
+import { User as PrismaUser, Level } from '@prisma/client';
 import { UserGraph } from 'src/modules/user/models/user.model'; // el de GraphQL
 import { UserService } from '../user/user.service';
 import { LoginInput } from '../auth/inputs/login.input';
@@ -93,8 +93,38 @@ export class AuthService {
     //buscar email o username
     const user = await this.userService.findByEmailOrUsername(usernameOrEmail);
 
+    //validar password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    const genericError = new UnauthorizedException('Credenciales inválidas');
+
+    if (!isPasswordValid) {
+      throw genericError;
+    }
+    const { password: _removed, ...safeUser } = user;
+    void _removed;
+
     const accessToken = this.jwtService.sign({ sub: user.id });
-    return { accessToken, user };
+    return {
+      accessToken,
+      user: {
+        ...(safeUser as Omit<
+          UserGraph,
+          | 'skins'
+          | 'friends'
+          | 'gameHistory'
+          | 'gameFavorites'
+          | 'notifications'
+          | 'chats'
+        >),
+        skins: [],
+        friends: [],
+        gameHistory: [],
+        gameFavorites: [],
+        notifications: [],
+        chats: [],
+      },
+    };
   }
 
   async validateUser(email: string, password: string): Promise<UserWithLevel> {
