@@ -8,7 +8,7 @@ import {
 import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { CreateUserInput } from './create-user.input';
-import type { User } from '@prisma/client';
+import type { User, Skin } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -257,5 +257,114 @@ export class UserService {
         },
       }),
     ]);
+  }
+
+  async unlockSkinsByLevel(userId: string, specificLevel?: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        level: true,
+        skins: {
+          select: { skinId: true },
+        },
+      },
+    });
+
+    if (!user) throw new Error('Usuario no encontrado');
+
+    const ownedSkinIds = user.skins.map((us) => us.skinId);
+
+    // Buscar skins que puede desbloquear
+    const skinsToUnlock = await this.prisma.skin.findMany({
+      where: {
+        level: specificLevel ? specificLevel : { lte: user.level.atomicNumber },
+        id: {
+          notIn: ownedSkinIds,
+        },
+      },
+      orderBy: {
+        level: 'asc',
+      },
+    });
+
+    if (skinsToUnlock.length === 0) {
+      return [];
+    }
+
+    // Desbloquear los skins
+    await this.prisma.userSkin.createMany({
+      data: skinsToUnlock.map((skin) => ({
+        userId,
+        skinId: skin.id,
+        active: false,
+      })),
+    });
+
+    return skinsToUnlock;
+  }
+
+  async addExperience(userId: string, experience: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { level: true },
+    });
+
+    if (!user) throw new Error('Usuario no encontrado');
+
+    const newExperience = user.experience + experience;
+    const currentLevel = user.level.atomicNumber;
+
+    // Buscar el siguiente nivel
+    const nextLevel = await this.prisma.level.findFirst({
+      where: {
+        experienceRequired: {
+          lte: newExperience,
+        },
+        atomicNumber: {
+          gt: currentLevel,
+        },
+      },
+      orderBy: {
+        atomicNumber: 'desc',
+      },
+    });
+
+    // Actualizar experiencia y nivel si corresponde
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        experience: newExperience,
+        ...(nextLevel && { levelId: nextLevel.id }),
+      },
+      include: {
+        level: true,
+      },
+    });
+
+    // Si subió de nivel, desbloquear skins
+    let unlockedSkins: Skin[] = [];
+    if (nextLevel) {
+      unlockedSkins = await this.unlockSkinsByLevel(
+        userId,
+        nextLevel.atomicNumber,
+      );
+    }
+
+    return {
+      user: updatedUser,
+      leveledUp: !!nextLevel,
+      previousLevel: currentLevel,
+      newLevel: updatedUser.level.atomicNumber,
+      unlockedSkins,
+    };
+  }
+
+  async getUserWithLevel(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        level: true,
+      },
+    });
   }
 }

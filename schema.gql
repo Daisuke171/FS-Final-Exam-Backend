@@ -81,6 +81,14 @@ type SkinWithStatus {
   userSkinId: ID
 }
 
+type LevelUpResponse {
+  user: User!
+  leveledUp: Boolean!
+  previousLevel: Int!
+  newLevel: Int!
+  unlockedSkins: [Skin!]!
+}
+
 type GameHistory {
   id: ID!
   gameId: ID!
@@ -177,11 +185,12 @@ type Query {
   globalLeaderboard: Leaderboard!
   userStats(userId: ID!, gameId: ID): UserStats!
   userFavorites(userId: ID!): [GameFavorite!]!
-  levels: [Level!]!
-  level(id: Int!): Level!
   users: [User!]!
   me(userId: ID!): User!
+  userWithLevel(userId: ID!): User!
   userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
+  levels: [Level!]!
+  level(id: Int!): Level!
   skins: [Skin!]!
   skin(id: ID!): Skin!
   userSkins: [UserSkin!]!
@@ -194,12 +203,14 @@ type Mutation {
   createGame(input: CreateGameInput!): Game!
   deleteGame(id: ID!): Game!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
-  createLevel(data: CreateLevelInput!): Level!
-  createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
-  deleteLevel(id: Int!): Level!
   createUser(data: CreateUserInput!): User!
   deleteUser(id: ID!): User!
   activateSkin(skinId: ID!, userId: ID!): UserSkin!
+  unlockSkins(userId: ID!): [Skin!]!
+  addExperience(experience: Int!, userId: ID!): LevelUpResponse!
+  createLevel(data: CreateLevelInput!): Level!
+  createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
+  deleteLevel(id: Int!): Level!
   register(registerInput: RegisterInput!): User!
   login(loginInput: LoginInput!): AuthResponse!
   createSkin(data: CreateSkinInput!): Skin!
@@ -247,14 +258,6 @@ input UpdateGameInput {
   minPlayers: Int
 }
 
-input CreateLevelInput {
-  atomicNumber: Int!
-  name: String!
-  chemicalSymbol: String!
-  color: String!
-  experienceRequired: Int!
-}
-
 input CreateUserInput {
   name: String!
   lastname: String!
@@ -264,6 +267,14 @@ input CreateUserInput {
   password: String!
   birthday: String!
   levelId: Int!
+}
+
+input CreateLevelInput {
+  atomicNumber: Int!
+  name: String!
+  chemicalSymbol: String!
+  color: String!
+  experienceRequired: Int!
 }
 
 input RegisterInput {

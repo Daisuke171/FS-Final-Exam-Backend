@@ -16,6 +16,8 @@ import { PrismaService } from 'prisma/prisma.service';
 import { SkinWithStatus } from './models/skin-with-status.model';
 // import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
 import { UserSkin } from '@modules/user-skins/models/user-skin.model';
+import { Skin } from '@modules/skins/models/skins.model';
+import { LevelUpResponse } from './models/level-up-response.model';
 
 @Resolver(() => User)
 export class UserResolver {
@@ -33,6 +35,11 @@ export class UserResolver {
   @Query(() => User)
   async me(@Args('userId', { type: () => ID }) userId: string) {
     return this.userService.getMe(userId);
+  }
+
+  @Query(() => User)
+  async userWithLevel(@Args('userId', { type: () => ID }) userId: string) {
+    return this.userService.getUserWithLevel(userId);
   }
 
   @Query(() => [SkinWithStatus])
@@ -136,4 +143,17 @@ export class UserResolver {
   //   const result = await this.userService.activateSkin(user.id, skinId);
   //   return result[1]; // Retorna el skin activado de la transacción
   // }
+
+  @Mutation(() => [Skin])
+  async unlockSkins(@Args('userId', { type: () => ID }) userId: string) {
+    return this.userService.unlockSkinsByLevel(userId);
+  }
+
+  @Mutation(() => LevelUpResponse)
+  async addExperience(
+    @Args('experience', { type: () => Int }) experience: number,
+    @Args('userId', { type: () => ID }) userId: string,
+  ) {
+    return this.userService.addExperience(userId, experience);
+  }
 }
