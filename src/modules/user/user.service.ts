@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { CreateUserInput } from './create-user.input';
 import type { User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
+import { UserGraph } from './models/user.model';
 
 @Injectable()
 export class UserService {
@@ -160,5 +161,46 @@ export class UserService {
     }
 
     return user;
+  }
+
+  async findByEmailOrUsername(identifier: string): Promise<UserGraph> {
+    if (!identifier) {
+      throw new BadRequestException('Falta el email o username');
+    }
+
+    const normalized = identifier.trim().toLowerCase();
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: {equals: normalized, mode: 'insensitive' } },
+            { username: {equals:normalized, mode: 'insensitive' } }],
+      },
+      include: {
+        level: true,
+      },
+    });
+
+    console.log('Buscando usuario con:', normalized);
+    console.log('Resultado de búsqueda:', user);
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const { password, ...safeUser } = user;
+
+    return {
+      ...safeUser,
+      skins: [],
+      friends: [],
+      gameHistory: [],
+      gameFavorites: [],
+      notifications: [],
+      chats: [],
+      nextLevelExperience: 0,
+      levelProgress: 0,
+      experienceToNextLevel: 0,
+      totalScore: 0,
+    };
   }
 }
