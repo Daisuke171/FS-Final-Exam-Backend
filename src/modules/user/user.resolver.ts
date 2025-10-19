@@ -10,7 +10,7 @@ import {
   Float,
 } from '@nestjs/graphql';
 import { UserService } from './user.service';
-import { User } from './models/user.model';
+import { UserGraph } from './models/user.model';
 import { CreateUserInput } from './create-user.input';
 import { PrismaService } from 'prisma/prisma.service';
 import { SkinWithStatus } from './models/skin-with-status.model';
@@ -19,7 +19,7 @@ import { UserSkin } from '@modules/user-skins/models/user-skin.model';
 import { Skin } from '@modules/skins/models/skins.model';
 import { LevelUpResponse } from './models/level-up-response.model';
 
-@Resolver(() => User)
+@Resolver(() => UserGraph)
 export class UserResolver {
   constructor(
     private readonly userService: UserService,
@@ -27,12 +27,12 @@ export class UserResolver {
   ) {}
 
   // === QUERIES ===
-  @Query(() => [User], { name: 'users' })
+  @Query(() => [UserGraph], { name: 'users' })
   findAll() {
     return this.userService.findAll();
   }
 
-  @Query(() => User)
+  @Query(() => UserGraph)
   async me(@Args('userId', { type: () => ID }) userId: string) {
     return this.userService.getMe(userId);
   }
@@ -57,7 +57,7 @@ export class UserResolver {
   // === RESOLVER FIELDS ===
 
   @ResolveField(() => Int, { nullable: true })
-  async nextLevelExperience(@Parent() user: User): Promise<number | null> {
+  async nextLevelExperience(@Parent() user: UserGraph): Promise<number | null> {
     // Obtener el siguiente nivel
     const nextLevel = await this.prisma.level.findFirst({
       where: {
@@ -70,7 +70,7 @@ export class UserResolver {
 
   // Progreso hacia el siguiente nivel (porcentaje)
   @ResolveField(() => Float)
-  async levelProgress(@Parent() user: User): Promise<number> {
+  async levelProgress(@Parent() user: UserGraph): Promise<number> {
     const nextLevel = await this.prisma.level.findFirst({
       where: {
         atomicNumber: user.level.atomicNumber + 1,
@@ -89,7 +89,7 @@ export class UserResolver {
 
   // Experiencia que falta para el siguiente nivel
   @ResolveField(() => Int)
-  async experienceToNextLevel(@Parent() user: User): Promise<number> {
+  async experienceToNextLevel(@Parent() user: UserGraph): Promise<number> {
     const nextLevel = await this.prisma.level.findFirst({
       where: {
         atomicNumber: user.level.atomicNumber + 1,
@@ -102,7 +102,7 @@ export class UserResolver {
   }
 
   @ResolveField(() => Int)
-  async totalScore(@Parent() user: User): Promise<number> {
+  async totalScore(@Parent() user: UserGraph): Promise<number> {
     const result = await this.prisma.gameHistory.aggregate({
       where: {
         userId: user.id,
@@ -116,12 +116,12 @@ export class UserResolver {
   }
 
   // === MUTATIONS ===
-  @Mutation(() => User)
+  @Mutation(() => UserGraph)
   createUser(@Args('data') data: CreateUserInput) {
     return this.userService.create(data);
   }
 
-  @Mutation(() => User)
+  @Mutation(() => UserGraph)
   deleteUser(@Args('id', { type: () => ID }) id: string) {
     return this.userService.delete(id);
   }

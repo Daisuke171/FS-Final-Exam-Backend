@@ -1,14 +1,16 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsEmail, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, MaxLength, MinLength, Matches } from 'class-validator';
 
 @InputType()
 export class LoginInput {
   @Field()
-  @IsEmail()
-  email: string;
+  @IsNotEmpty()
+  usernameOrEmail: string; //puede ser email o username
 
   @Field()
-  @MinLength(6)
-  @MaxLength(16)
+  @IsNotEmpty()
+  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
+  @MaxLength(16, { message: 'La contraseña debe tener al menos 16 caracteres' })
+  @Matches(/^\S+$/, { message: 'La contraseña no puede tener espacios' })
   password: string;
 }

@@ -1,5 +1,5 @@
 import { ObjectType, Field, ID, GraphQLISODateTime } from '@nestjs/graphql';
-import { User } from '../../user/models/user.model';
+import { UserGraph } from '../../user/models/user.model';
 
 @ObjectType()
 export class Friend {
@@ -18,11 +18,11 @@ export class Friend {
   @Field(() => ID)
   receiverId!: string;
 
-  @Field(() => User, { nullable: true })
-  requester?: User;
+  @Field(() => UserGraph, { nullable: true })
+  requester?: UserGraph;
 
-  @Field(() => User, { nullable: true })
-  receiver?: User;
+  @Field(() => UserGraph, { nullable: true })
+  receiver?: UserGraph;
 
   @Field(() => GraphQLISODateTime)
   createdAt!: Date;

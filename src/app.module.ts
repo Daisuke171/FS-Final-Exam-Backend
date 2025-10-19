@@ -11,10 +11,13 @@ import { UserSkinModule } from './modules/user-skins/user-skins.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { CommonModule } from './common/common.module';
-import { CodingWarModule } from './modules/games/web-sockets/coding-war/coding-war.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: 'schema.gql',

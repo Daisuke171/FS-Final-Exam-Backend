@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { User } from '@modules/user/models/user.model';
+import { UserGraph } from '@modules/user/models/user.model';
 
 @ObjectType()
 export class Level {
@@ -21,8 +21,8 @@ export class Level {
   @Field()
   color: string;
 
-  @Field(() => [User], { nullable: true })
-  users?: User[];
+  @Field(() => [UserGraph], { nullable: true })
+  users?: UserGraph[];
 
   @Field(() => Date)
   createdAt: Date;

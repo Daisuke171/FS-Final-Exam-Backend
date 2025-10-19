@@ -2,33 +2,7 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type Skin {
-  id: ID!
-  name: String!
-  img: String!
-  level: Int!
-  value: Float!
-  users: [User]
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-"""
-A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
-"""
-scalar DateTime
-
-type UserSkin {
-  id: ID!
-  userId: String!
-  skinId: String!
-  active: Boolean!
-  acquiredAt: DateTime!
-  user: User
-  skin: Skin
-}
-
-type User {
+type UserGraph {
   id: ID!
   email: String!
   username: String!
@@ -39,7 +13,7 @@ type User {
   levelId: Int!
   level: Level!
   nickname: String
-  skins: [UserSkin!]
+  skins: [String!]
   friends: [String!]!
   gameHistory: [String!]!
   gameFavorites: [String!]!
@@ -61,7 +35,7 @@ type Level {
   atomicNumber: Int!
   chemicalSymbol: String!
   color: String!
-  users: [User!]
+  users: [UserGraph!]
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -94,7 +68,7 @@ type GameHistory {
   gameId: ID!
   game: Game
   userId: ID!
-  user: User
+  user: UserGraph
   duration: Int!
   state: String!
   score: Int!
@@ -108,7 +82,7 @@ type GameFavorite {
   gameId: ID!
   game: Game
   userId: ID!
-  user: User
+  user: UserGraph
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -164,7 +138,28 @@ type UserStats {
 
 type AuthResponse {
   accessToken: String!
-  user: User!
+  user: UserGraph!
+}
+
+type Skin {
+  id: ID!
+  name: String!
+  img: String!
+  level: Int!
+  value: Float!
+  users: [UserGraph]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type UserSkin {
+  id: ID!
+  userId: String!
+  skinId: String!
+  equipped: Boolean!
+  acquiredAt: DateTime!
+  user: UserGraph
+  skin: Skin
 }
 
 type ChatMessage {
@@ -191,6 +186,8 @@ type Query {
   userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
   levels: [Level!]!
   level(id: Int!): Level!
+  users: [UserGraph!]!
+  me(userId: ID!): UserGraph!
   skins: [Skin!]!
   skin(id: ID!): Skin!
   userSkins: [UserSkin!]!
@@ -211,7 +208,8 @@ type Mutation {
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   deleteLevel(id: Int!): Level!
-  register(registerInput: RegisterInput!): User!
+  createUser(data: CreateUserInput!): UserGraph!
+  deleteUser(id: ID!): UserGraph!
   login(loginInput: LoginInput!): AuthResponse!
   createSkin(data: CreateSkinInput!): Skin!
   deleteSkin(id: ID!): Skin!
@@ -269,26 +267,8 @@ input CreateUserInput {
   levelId: Int!
 }
 
-input CreateLevelInput {
-  atomicNumber: Int!
-  name: String!
-  chemicalSymbol: String!
-  color: String!
-  experienceRequired: Int!
-}
-
-input RegisterInput {
-  email: String!
-  username: String!
-  nickname: String!
-  password: String!
-  name: String!
-  lastname: String!
-  birthday: String!
-}
-
 input LoginInput {
-  email: String!
+  usernameOrEmail: String!
   password: String!
 }
 
