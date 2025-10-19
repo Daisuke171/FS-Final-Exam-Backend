@@ -12,6 +12,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { CommonModule } from './common/common.module';
 import { ConfigModule } from '@nestjs/config';
+import { CodingWarModule } from '@modules/games/web-sockets/coding-war/coding-war.module';
 
 @Module({
   imports: [
