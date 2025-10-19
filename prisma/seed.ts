@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { CreateLevelInput } from '@modules/games/web-sockets/rock-paper-scissors/utils/getNextLevel';
 
 // ========================================================================================
 // ========================================================================================
@@ -17,14 +18,6 @@ interface CreateGameInput {
   duration: string;
   maxPlayers: number;
   minPlayers: number;
-}
-
-interface CreateLevelInput {
-  atomicNumber: number;
-  name: string;
-  chemicalSymbol: string;
-  color: string;
-  experienceRequired: number;
 }
 
 interface CreateSkinInput {
