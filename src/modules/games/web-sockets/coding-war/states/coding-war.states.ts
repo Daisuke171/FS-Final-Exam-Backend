@@ -31,6 +31,7 @@ export class Game {
 
   // Typing game specific
   public scores: Map<string, number> = new Map();
+  public problemIndex: Map<string, number> = new Map();
 
   // Kept for gateway compatibility with buildStateData
   public history: unknown[] = [];
@@ -120,6 +121,7 @@ export class Game {
       ready: Object.fromEntries(this.ready.entries()),
       // Provide both scores (new) and hp/moves for compat with existing gateway
       scores: Object.fromEntries(this.scores.entries()),
+      problemIndex: Object.fromEntries(this.problemIndex.entries()),
       roomInfo: {
         id: this.roomId,
         name: this.roomConfig.name,
@@ -154,12 +156,14 @@ export class WaitingState extends GameState {
   handleJoin(playerId: string, game: Game): void {
     game.players.set(playerId, { id: playerId, socketId: playerId });
     if (!game.scores.has(playerId)) game.scores.set(playerId, 0);
+    if (!game.problemIndex.has(playerId)) game.problemIndex.set(playerId, 0);
   }
   handleMove(): void {}
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
     game.clearReady(playerId);
     game.scores.delete(playerId);
+    game.problemIndex.delete(playerId);
   }
 }
 
@@ -274,6 +278,22 @@ export class FinishedState extends GameState {
       winner,
       finalScores: Object.fromEntries(game.scores.entries()),
     });
+
+    // After a short delay, reset room so players can replay without recreating the room
+    setTimeout(() => {
+      // Reset scores and per-player progression for a fresh start
+      game.scores.clear();
+      for (const id of game.players.keys()) {
+        game.scores.set(id, 0);
+      }
+      game.problemIndex.clear();
+      for (const id of game.players.keys()) {
+        game.problemIndex.set(id, 0);
+      }
+      // Keep last result on the object for any UI that wants to show it on the room screen
+      // Transition back to Waiting so joinRoom and ready flow work again
+      game.setState(new WaitingState());
+    }, 1500);
   }
   handleJoin(): void {}
   handleMove(): void {}
