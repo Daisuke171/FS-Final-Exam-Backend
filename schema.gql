@@ -2,6 +2,32 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type Skin {
+  id: ID!
+  name: String!
+  img: String!
+  level: Int!
+  value: Float!
+  users: [UserGraph]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type UserSkin {
+  id: ID!
+  userId: String!
+  skinId: String!
+  active: Boolean!
+  acquiredAt: DateTime!
+  user: UserGraph
+  skin: Skin
+}
+
 type UserGraph {
   id: ID!
   email: String!
@@ -13,7 +39,7 @@ type UserGraph {
   levelId: Int!
   level: Level!
   nickname: String
-  skins: [String!]
+  skins: [UserSkin!]
   friends: [String!]!
   gameHistory: [String!]!
   gameFavorites: [String!]!
@@ -56,7 +82,7 @@ type SkinWithStatus {
 }
 
 type LevelUpResponse {
-  user: User!
+  user: UserGraph!
   leveledUp: Boolean!
   previousLevel: Int!
   newLevel: Int!
@@ -141,27 +167,6 @@ type AuthResponse {
   user: UserGraph!
 }
 
-type Skin {
-  id: ID!
-  name: String!
-  img: String!
-  level: Int!
-  value: Float!
-  users: [UserGraph]
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type UserSkin {
-  id: ID!
-  userId: String!
-  skinId: String!
-  equipped: Boolean!
-  acquiredAt: DateTime!
-  user: UserGraph
-  skin: Skin
-}
-
 type ChatMessage {
   id: ID!
   chatId: ID!
@@ -180,14 +185,12 @@ type Query {
   globalLeaderboard: Leaderboard!
   userStats(userId: ID!, gameId: ID): UserStats!
   userFavorites(userId: ID!): [GameFavorite!]!
-  users: [User!]!
-  me(userId: ID!): User!
-  userWithLevel(userId: ID!): User!
+  users: [UserGraph!]!
+  me(userId: ID!): UserGraph!
+  userWithLevel(userId: ID!): UserGraph!
   userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
   levels: [Level!]!
   level(id: Int!): Level!
-  users: [UserGraph!]!
-  me(userId: ID!): UserGraph!
   skins: [Skin!]!
   skin(id: ID!): Skin!
   userSkins: [UserSkin!]!
@@ -200,16 +203,15 @@ type Mutation {
   createGame(input: CreateGameInput!): Game!
   deleteGame(id: ID!): Game!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
-  createUser(data: CreateUserInput!): User!
-  deleteUser(id: ID!): User!
+  createUser(data: CreateUserInput!): UserGraph!
+  deleteUser(id: ID!): UserGraph!
   activateSkin(skinId: ID!, userId: ID!): UserSkin!
   unlockSkins(userId: ID!): [Skin!]!
   addExperience(experience: Int!, userId: ID!): LevelUpResponse!
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   deleteLevel(id: Int!): Level!
-  createUser(data: CreateUserInput!): UserGraph!
-  deleteUser(id: ID!): UserGraph!
+  register(registerInput: RegisterInput!): UserGraph!
   login(loginInput: LoginInput!): AuthResponse!
   createSkin(data: CreateSkinInput!): Skin!
   deleteSkin(id: ID!): Skin!
@@ -265,6 +267,24 @@ input CreateUserInput {
   password: String!
   birthday: String!
   levelId: Int!
+}
+
+input CreateLevelInput {
+  atomicNumber: Int!
+  name: String!
+  chemicalSymbol: String!
+  color: String!
+  experienceRequired: Int!
+}
+
+input RegisterInput {
+  email: String!
+  username: String!
+  nickname: String!
+  password: String!
+  name: String!
+  lastname: String!
+  birthday: String!
 }
 
 input LoginInput {

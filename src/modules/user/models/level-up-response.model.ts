@@ -1,11 +1,11 @@
 import { ObjectType, Field, Int } from '@nestjs/graphql';
-import { User } from './user.model';
+import { UserGraph } from './user.model';
 import { Skin } from '@modules/skins/models/skins.model';
 
 @ObjectType()
 export class LevelUpResponse {
-  @Field(() => User)
-  user: User;
+  @Field(() => UserGraph)
+  user: UserGraph;
 
   @Field()
   leveledUp: boolean;

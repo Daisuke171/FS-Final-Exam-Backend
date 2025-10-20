@@ -37,7 +37,7 @@ export class UserResolver {
     return this.userService.getMe(userId);
   }
 
-  @Query(() => User)
+  @Query(() => UserGraph)
   async userWithLevel(@Args('userId', { type: () => ID }) userId: string) {
     return this.userService.getUserWithLevel(userId);
   }
