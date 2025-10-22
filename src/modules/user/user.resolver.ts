@@ -11,7 +11,6 @@ import {
 } from '@nestjs/graphql';
 import { UserService } from './user.service';
 import { UserGraph } from './models/user.model';
-import { CreateUserInput } from './create-user.input';
 import { PrismaService } from 'prisma/prisma.service';
 import { SkinWithStatus } from './models/skin-with-status.model';
 // import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
@@ -116,11 +115,6 @@ export class UserResolver {
   }
 
   // === MUTATIONS ===
-  @Mutation(() => UserGraph)
-  createUser(@Args('data') data: CreateUserInput) {
-    return this.userService.create(data);
-  }
-
   @Mutation(() => UserGraph)
   deleteUser(@Args('id', { type: () => ID }) id: string) {
     return this.userService.delete(id);
