@@ -10,6 +10,10 @@ import * as bcrypt from 'bcrypt';
 import type { User, Skin } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
+type UserWithLevelAndSkins = Prisma.UserGetPayload<{
+  include: { level: true; skins: true };
+}>;
+
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
@@ -107,7 +111,9 @@ export class UserService {
     return user;
   }
 
-  async findByEmailOrUsername(identifier: string): Promise<User> {
+  async findByEmailOrUsername(
+    identifier: string,
+  ): Promise<UserWithLevelAndSkins> {
     if (!identifier) {
       throw new BadRequestException('Falta el email o username');
     }
@@ -123,17 +129,19 @@ export class UserService {
       },
       include: {
         level: true,
+        skins: {
+          where: {
+            active: true,
+          },
+          include: {
+            skin: true,
+          },
+        },
       },
     });
+    console.log(user);
 
-    console.log('Buscando usuario con:', normalized);
-    console.log('Resultado de búsqueda:', user);
-
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
-
-    return user;
+    return user!;
   }
 
   async getUserSkinsWithStatus(userId: string) {

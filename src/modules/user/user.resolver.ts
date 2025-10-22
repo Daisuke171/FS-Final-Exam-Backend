@@ -17,6 +17,9 @@ import { SkinWithStatus } from './models/skin-with-status.model';
 import { UserSkin } from '@modules/user-skins/models/user-skin.model';
 import { Skin } from '@modules/skins/models/skins.model';
 import { LevelUpResponse } from './models/level-up-response.model';
+import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
+import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
+import { UseGuards } from '@nestjs/common';
 
 @Resolver(() => UserGraph)
 export class UserResolver {
@@ -31,27 +34,23 @@ export class UserResolver {
     return this.userService.findAll();
   }
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => UserGraph)
-  async me(@Args('userId', { type: () => ID }) userId: string) {
-    return this.userService.getMe(userId);
+  async me(@CurrentUser() user: UserGraph) {
+    return this.userService.getMe(user.id);
   }
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => UserGraph)
-  async userWithLevel(@Args('userId', { type: () => ID }) userId: string) {
-    return this.userService.getUserWithLevel(userId);
+  async userWithLevel(@CurrentUser() user: UserGraph) {
+    return this.userService.getUserWithLevel(user.id);
   }
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => [SkinWithStatus])
-  async userSkinsWithStatus(
-    @Args('userId', { type: () => ID }) userId: string,
-  ) {
-    return this.userService.getUserSkinsWithStatus(userId);
+  async userSkinsWithStatus(@CurrentUser() user: UserGraph) {
+    return this.userService.getUserSkinsWithStatus(user.id);
   }
-
-  // @Query(() => [SkinWithStatus])
-  // async userSkinsWithStatus(@CurrentUser() user: User) {
-  //   return this.userService.getUserSkinsWithStatus(user.id);
-  // }
 
   // === RESOLVER FIELDS ===
 
@@ -111,7 +110,7 @@ export class UserResolver {
       },
     });
 
-    return result._sum.score || 0;
+    return Math.max(0, result._sum.score || 0);
   }
 
   // === MUTATIONS ===
@@ -120,34 +119,28 @@ export class UserResolver {
     return this.userService.delete(id);
   }
 
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserSkin)
   async activateSkin(
     @Args('skinId', { type: () => ID }) skinId: string,
-    @Args('userId', { type: () => ID }) userId: string,
+    @CurrentUser() user: UserGraph,
   ) {
-    const result = await this.userService.activateSkin(userId, skinId);
+    const result = await this.userService.activateSkin(user.id, skinId);
     return result[1]; // Retorna el skin activado de la transacción
   }
 
-  // @Mutation(() => UserSkin)
-  // async activateSkin(
-  //   @Args('skinId', { type: () => ID }) skinId: string,
-  //   @CurrentUser() user: User,
-  // ) {
-  //   const result = await this.userService.activateSkin(user.id, skinId);
-  //   return result[1]; // Retorna el skin activado de la transacción
-  // }
-
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => [Skin])
-  async unlockSkins(@Args('userId', { type: () => ID }) userId: string) {
-    return this.userService.unlockSkinsByLevel(userId);
+  async unlockSkins(@CurrentUser() user: UserGraph) {
+    return this.userService.unlockSkinsByLevel(user.id);
   }
 
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => LevelUpResponse)
   async addExperience(
     @Args('experience', { type: () => Int }) experience: number,
-    @Args('userId', { type: () => ID }) userId: string,
+    @CurrentUser() user: UserGraph,
   ) {
-    return this.userService.addExperience(userId, experience);
+    return this.userService.addExperience(user.id, experience);
   }
 }
