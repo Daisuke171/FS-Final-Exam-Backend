@@ -480,10 +480,19 @@ export class FinishedState extends GameState {
     const usersService = game.getUsersService();
     const duration = Math.floor((Date.now() - game.startTime) / 1000);
 
-    const userId1 =
-      game.playerUserIds.get(p1) || 'f9ee7c60-dfa5-4bc1-a465-1d2c166a5010';
-    const userId2 =
-      game.playerUserIds.get(p2) || '3d0ef120-1a72-460e-b8d5-035344d72674';
+    const userId1 = game.playerUserIds.get(p1);
+    const userId2 = game.playerUserIds.get(p2);
+
+    if (!userId1 || !userId2) {
+      console.error(
+        'Error: No se encontró userId para alguno de los jugadores',
+      );
+      game.emit('gameOver', {
+        winner: null,
+        error: 'No se pudo guardar la partida',
+      });
+      return;
+    }
 
     const gameId = 'e3163526-32ee-423a-9747-80cea7a00dc9';
     const maxHp = 100;
@@ -510,23 +519,27 @@ export class FinishedState extends GameState {
       const player1Xp = this.calculateXpFromScore(player1Score, winner === p1);
       const player2Xp = this.calculateXpFromScore(player2Score, winner === p2);
 
-      await gamesApiService.saveGameResult({
-        userId: userId1,
-        gameId: gameId,
-        duration,
-        state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
-        score: player1Score,
-        totalDamage: game.damageDealt.get(p1) || 0,
-      });
+      await gamesApiService.saveGameResult(
+        {
+          gameId: gameId,
+          duration,
+          state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
+          score: player1Score,
+          totalDamage: game.damageDealt.get(p1) || 0,
+        },
+        userId1,
+      );
 
-      await gamesApiService.saveGameResult({
-        userId: userId2,
-        gameId: gameId,
-        duration,
-        state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
-        score: player2Score,
-        totalDamage: game.damageDealt.get(p2) || 0,
-      });
+      await gamesApiService.saveGameResult(
+        {
+          gameId: gameId,
+          duration,
+          state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
+          score: player2Score,
+          totalDamage: game.damageDealt.get(p2) || 0,
+        },
+        userId2,
+      );
 
       const user1Before = await usersService.getUserWithLevel(userId1);
       const user2Before = await usersService.getUserWithLevel(userId2);
@@ -677,7 +690,7 @@ export class FinishedState extends GameState {
         return Math.max(-5, Math.round(totalScore));
       }
 
-      return Math.max(-50, -20 - rounds * 2);
+      return Math.max(-40, -20 - rounds * 2);
     }
   }
   private calculateXpFromScore(score: number, won: boolean): number {
