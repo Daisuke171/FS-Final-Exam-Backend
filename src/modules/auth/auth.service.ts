@@ -1,20 +1,16 @@
 import {
   ConflictException,
   Injectable,
-  // InternalServerErrorException,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterInput } from './inputs/register.input';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'prisma/prisma.service';
-import { User as PrismaUser, Level } from '@prisma/client';
-import { UserGraph } from 'src/modules/user/models/user.model'; // el de GraphQL
 import { UserService } from '../user/user.service';
 import { LoginInput } from '../auth/inputs/login.input';
 import { AuthResponse } from '../auth/responses/auth.response';
-
-type UserWithLevel = PrismaUser & { level: Level };
 
 @Injectable()
 export class AuthService {
@@ -40,28 +36,14 @@ export class AuthService {
     if (existingUser) {
       throw new ConflictException('User already exists');
     }
-    let initialLevel = await this.prisma.level.findFirst({
+    const initialLevel = await this.prisma.level.findFirst({
       where: { experienceRequired: 0 },
       select: { id: true },
     });
 
-    // Se usó solo para testear, luego se quitará
-
     if (!initialLevel) {
-      initialLevel = await this.prisma.level.create({
-        data: {
-          experienceRequired: 0,
-          name: 'Principiante',
-          atomicNumber: 0,
-          color: '#000000',
-          chemicalSymbol: 'Ni',
-        },
-      });
+      throw new InternalServerErrorException('Initial level not found');
     }
-
-    // if (!initialLevel) {
-    //   throw new InternalServerErrorException('Initial level not found');
-    // }
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     const user = await this.prisma.user.create({
@@ -90,68 +72,46 @@ export class AuthService {
   async login(loginInput: LoginInput): Promise<AuthResponse> {
     const { usernameOrEmail, password } = loginInput;
 
-    //buscar email o username
-    const user = await this.userService.findByEmailOrUsername(usernameOrEmail);
+    const genericError = new UnauthorizedException(
+      'Usuario o contraseña incorrectos',
+    );
 
-    //validar password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    try {
+      const user =
+        await this.userService.findByEmailOrUsername(usernameOrEmail);
 
-    const genericError = new UnauthorizedException('Credenciales inválidas');
+      if (!user) {
+        throw genericError;
+      }
 
-    if (!isPasswordValid) {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        throw genericError;
+      }
+
+      const { password: _removed, ...safeUser } = user;
+      void _removed;
+
+      const accessToken = this.jwtService.sign({ sub: user.id });
+
+      return {
+        accessToken,
+        user: {
+          ...safeUser,
+          friends: [],
+          gameHistory: [],
+          gameFavorites: [],
+          notifications: [],
+          chats: [],
+        },
+      };
+    } catch (error) {
+      console.error('FATAL INTERNAL ERROR AFTER PASSWORD CHECK:', error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw genericError;
     }
-    const { password: _removed, ...safeUser } = user;
-    void _removed;
-
-    const accessToken = this.jwtService.sign({ sub: user.id });
-    return {
-      accessToken,
-      user: {
-        ...(safeUser as Omit<
-          UserGraph,
-          | 'skins'
-          | 'friends'
-          | 'gameHistory'
-          | 'gameFavorites'
-          | 'notifications'
-          | 'chats'
-        >),
-        skins: [],
-        friends: [],
-        gameHistory: [],
-        gameFavorites: [],
-        notifications: [],
-        chats: [],
-      },
-    };
   }
-
-  async validateUser(email: string, password: string): Promise<UserWithLevel> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: {
-        level: true,
-      },
-    });
-
-    const genericError = new UnauthorizedException('Credenciales inválidas');
-
-    if (!user) {
-      throw genericError;
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      throw genericError;
-    }
-
-    return user;
-  }
-
-  // private excludePassword(user: PrismaUser): Omit<PrismaUser, 'password'> {
-  //   const { password, ...result } = user;
-  //   return result; // Devuelve el objeto con todos los demás campos
-  // }
 }

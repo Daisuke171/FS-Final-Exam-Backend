@@ -23,7 +23,8 @@ type UserSkin {
   userId: String!
   skinId: String!
   active: Boolean!
-  acquiredAt: DateTime!
+  createdAt: DateTime!
+  updatedAt: DateTime!
   user: UserGraph
   skin: Skin
 }
@@ -180,15 +181,24 @@ type ChatMessage {
 type Query {
   games: [Game!]!
   game(id: ID!): Game!
-  userGames(userId: ID!, gameId: ID): [GameHistory!]!
+  userGames(gameId: ID): [GameHistory!]!
   leaderboard(gameId: ID!): Leaderboard!
   globalLeaderboard: Leaderboard!
+<<<<<<< HEAD
   userStats(userId: ID!, gameId: ID): UserStats!
   userFavorites(userId: ID!): [GameFavorite!]!
   users: [UserGraph!]!
   me(userId: ID!): UserGraph!
   userWithLevel(userId: ID!): UserGraph!
   userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
+=======
+  userStats(gameId: ID): UserStats!
+  userFavorites: [GameFavorite!]!
+  users: [UserGraph!]!
+  me: UserGraph!
+  userWithLevel: UserGraph!
+  userSkinsWithStatus: [SkinWithStatus!]!
+>>>>>>> testing
   levels: [Level!]!
   level(id: Int!): Level!
   skins: [Skin!]!
@@ -198,13 +208,14 @@ type Query {
 }
 
 type Mutation {
-  toggleFavorite(input: ToggleFavoriteInput!): Boolean!
+  toggleFavorite(gameId: ID!): Boolean!
   saveGameResult(input: SaveGameResultInput!): GameHistory!
   createGame(input: CreateGameInput!): Game!
   deleteGame(id: ID!): Game!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
   createUser(data: CreateUserInput!): UserGraph!
   deleteUser(id: ID!): UserGraph!
+<<<<<<< HEAD
   activateSkin(skinId: ID!, userId: ID!): UserSkin!
   unlockSkins(userId: ID!): [Skin!]!
   addExperience(experience: Int!, userId: ID!): LevelUpResponse!
@@ -213,6 +224,16 @@ type Mutation {
   deleteLevel(id: Int!): Level!
   register(registerInput: RegisterInput!): UserGraph!
   login(loginInput: LoginInput!): AuthResponse!
+=======
+  activateSkin(skinId: ID!): UserSkin!
+  unlockSkins: [Skin!]!
+  addExperience(experience: Int!): LevelUpResponse!
+  register(registerInput: RegisterInput!): UserGraph!
+  login(loginInput: LoginInput!): AuthResponse!
+  createLevel(data: CreateLevelInput!): Level!
+  createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
+  deleteLevel(id: Int!): Level!
+>>>>>>> testing
   createSkin(data: CreateSkinInput!): Skin!
   deleteSkin(id: ID!): Skin!
   assignSkin(data: CreateUserSkinInput!): UserSkin!
@@ -220,13 +241,7 @@ type Mutation {
   markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
 }
 
-input ToggleFavoriteInput {
-  userId: ID!
-  gameId: ID!
-}
-
 input SaveGameResultInput {
-  userId: ID!
   gameId: ID!
   duration: Int!
   state: String!
@@ -269,6 +284,7 @@ input CreateUserInput {
   levelId: Int!
 }
 
+<<<<<<< HEAD
 input CreateLevelInput {
   atomicNumber: Int!
   name: String!
@@ -277,6 +293,8 @@ input CreateLevelInput {
   experienceRequired: Int!
 }
 
+=======
+>>>>>>> testing
 input RegisterInput {
   email: String!
   username: String!
@@ -290,6 +308,14 @@ input RegisterInput {
 input LoginInput {
   usernameOrEmail: String!
   password: String!
+}
+
+input CreateLevelInput {
+  atomicNumber: Int!
+  name: String!
+  chemicalSymbol: String!
+  color: String!
+  experienceRequired: Int!
 }
 
 input CreateSkinInput {

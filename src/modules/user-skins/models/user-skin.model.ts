@@ -17,7 +17,10 @@ export class UserSkin {
   active!: boolean;
 
   @Field()
-  acquiredAt!: Date;
+  createdAt!: Date;
+
+  @Field()
+  updatedAt!: Date;
 
   @Field(() => UserGraph, { nullable: true })
   user?: UserGraph;

@@ -5,10 +5,6 @@ import { IsNotEmpty, Min, IsIn } from 'class-validator';
 export class SaveGameResultInput {
   @Field(() => ID)
   @IsNotEmpty()
-  userId: string;
-
-  @Field(() => ID)
-  @IsNotEmpty()
   gameId: string;
 
   @Field(() => Int)
