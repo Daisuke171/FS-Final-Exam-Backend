@@ -233,6 +233,11 @@ export class StartingState extends GameState {
   private timerId: NodeJS.Timeout | null = null;
   onEnter(game: Game): void {
     game.resetAllReady();
+    game.moves.clear();
+    game.history = [];
+    game.damageDealt.clear();
+    game.startTime = Date.now();
+
     for (const playerId of game.players.keys()) {
       game.setHP(playerId, 100);
     }
@@ -278,6 +283,7 @@ export class PlayingState extends GameState {
   private startTime = 0;
   onEnter(game: Game): void {
     this.playersReadyForMatch.clear();
+    this.gameStarted = false;
     console.log(
       `El juego ${game.roomId} está esperando que los clientes carguen la partida.`,
     );

@@ -184,21 +184,12 @@ type Query {
   userGames(gameId: ID): [GameHistory!]!
   leaderboard(gameId: ID!): Leaderboard!
   globalLeaderboard: Leaderboard!
-<<<<<<< HEAD
-  userStats(userId: ID!, gameId: ID): UserStats!
-  userFavorites(userId: ID!): [GameFavorite!]!
-  users: [UserGraph!]!
-  me(userId: ID!): UserGraph!
-  userWithLevel(userId: ID!): UserGraph!
-  userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
-=======
   userStats(gameId: ID): UserStats!
   userFavorites: [GameFavorite!]!
   users: [UserGraph!]!
   me: UserGraph!
   userWithLevel: UserGraph!
   userSkinsWithStatus: [SkinWithStatus!]!
->>>>>>> testing
   levels: [Level!]!
   level(id: Int!): Level!
   skins: [Skin!]!
@@ -215,16 +206,6 @@ type Mutation {
   updateGame(id: ID!, input: UpdateGameInput!): Game!
   createUser(data: CreateUserInput!): UserGraph!
   deleteUser(id: ID!): UserGraph!
-<<<<<<< HEAD
-  activateSkin(skinId: ID!, userId: ID!): UserSkin!
-  unlockSkins(userId: ID!): [Skin!]!
-  addExperience(experience: Int!, userId: ID!): LevelUpResponse!
-  createLevel(data: CreateLevelInput!): Level!
-  createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
-  deleteLevel(id: Int!): Level!
-  register(registerInput: RegisterInput!): UserGraph!
-  login(loginInput: LoginInput!): AuthResponse!
-=======
   activateSkin(skinId: ID!): UserSkin!
   unlockSkins: [Skin!]!
   addExperience(experience: Int!): LevelUpResponse!
@@ -233,7 +214,6 @@ type Mutation {
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   deleteLevel(id: Int!): Level!
->>>>>>> testing
   createSkin(data: CreateSkinInput!): Skin!
   deleteSkin(id: ID!): Skin!
   assignSkin(data: CreateUserSkinInput!): UserSkin!
@@ -284,17 +264,6 @@ input CreateUserInput {
   levelId: Int!
 }
 
-<<<<<<< HEAD
-input CreateLevelInput {
-  atomicNumber: Int!
-  name: String!
-  chemicalSymbol: String!
-  color: String!
-  experienceRequired: Int!
-}
-
-=======
->>>>>>> testing
 input RegisterInput {
   email: String!
   username: String!
