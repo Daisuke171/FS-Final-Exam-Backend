@@ -12,6 +12,7 @@ import { RpsService } from '../rps.service';
 import { Moves, Game, StartingState, PlayingState } from '../states/rps.states';
 import { GamesService } from '@modules/games/games.service';
 import { UserService } from '@modules/user/user.service';
+import { JwtService } from '@nestjs/jwt';
 
 interface StateProps {
   state: string;
@@ -52,10 +53,54 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private gameService: RpsService,
     private gameApiService: GamesService,
     private usersService: UserService,
+    private jwtService: JwtService,
   ) {}
 
-  handleConnection(client: Socket) {
-    console.log(`Cliente conectado: ${client.id}`);
+  async handleConnection(client: Socket) {
+    try {
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace('Bearer ', '');
+
+      if (!token) {
+        client.emit('error', { message: 'Token no proporcionado' });
+        client.disconnect();
+        return;
+      }
+
+      const payload = await this.jwtService.verifyAsync(token);
+      const userId = payload.sub;
+
+      if (!userId) {
+        client.disconnect();
+        return;
+      }
+
+      const user = await this.usersService.getMe(userId);
+
+      if (!user) {
+        client.disconnect();
+        return;
+      }
+
+      client.data.userId = userId;
+      client.data.nickname = user.nickname;
+
+      this.playerInfo.set(client.id, {
+        nickname: user.nickname || client.id,
+        userId: userId,
+      });
+
+      client.emit('authenticated', {
+        userId,
+        nickname: user.nickname,
+        socketId: client.id,
+      });
+    } catch (error) {
+      console.error('Error en autenticación de WebSocket:', error);
+      client.emit('error', { message: 'Error de autenticación' });
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -76,20 +121,6 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.playerRooms.delete(client.id);
     }
     this.playerInfo.delete(client.id);
-  }
-
-  @SubscribeMessage('setUserInfo')
-  handleSetUserInfo(
-    @MessageBody() data: { nickname: string; userId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    this.playerInfo.set(client.id, {
-      nickname: data.nickname,
-      userId: data.userId,
-    });
-    console.log(
-      `Cliente ${client.id} asignó - Nickname: ${data.nickname}, UserId: ${data.userId}`,
-    );
   }
 
   private getPlayerInfo(clientId: string): PlayerInfo {
@@ -317,7 +348,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const playerInfo = this.getPlayerInfo(client.id);
     const nickname = playerInfo.nickname;
     const timestamp = new Date().toISOString();
-    console.log(`Mensaje en sala ${roomId} de ${client.id}: ${message}`);
+    console.log(`Mensaje en sala ${roomId} de ${nickname}: ${message}`);
     this.server.to(roomId).emit('roomChatMessages', {
       playerId: nickname,
       message,
