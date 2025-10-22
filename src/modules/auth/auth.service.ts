@@ -25,6 +25,10 @@ export class AuthService {
   ) {}
 
   async register(data: RegisterInput) {
+    const email = data.email.toLowerCase().trim();
+    const username = data.username.toLowerCase().trim();
+    const nickname = data.nickname.trim();
+
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -33,17 +37,26 @@ export class AuthService {
           { nickname: data.nickname },
         ],
       },
-      include: {
-        level: true,
-      },
+      select: { email: true, username: true, nickname: true },
     });
-    if (existingUser) {
-      throw new ConflictException('User already exists');
-    }
+
     let initialLevel = await this.prisma.level.findFirst({
       where: { experienceRequired: 0 },
-      select: { id: true },
     });
+
+    if (existingUser) {
+      const conflicts: Record<string, string> = {
+        email: 'El Email ya existe',
+        username: 'El Username ya existe',
+        nickname: 'El Nickname ya existe',
+      };
+
+      for (const key of Object.keys(conflicts)) {
+        if (existingUser[key] === (data as any)[key]) {
+          throw new ConflictException(conflicts[key]);
+        }
+      }
+    }
 
     // Se usó solo para testear, luego se quitará
 
@@ -62,11 +75,18 @@ export class AuthService {
     // if (!initialLevel) {
     //   throw new InternalServerErrorException('Initial level not found');
     // }
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await bcrypt.hash(
+      data.password,
+      Number(process.env.BCRYPT_SALT_ROUNDS) || 10,
+    );
 
     const user = await this.prisma.user.create({
       data: {
-        ...data,
+        email,
+        username,
+        nickname,
+        name: data.name.trim(),
+        lastname: data.lastname.trim(),
         birthday: new Date(data.birthday),
         password: hashedPassword,
         levelId: initialLevel.id,
@@ -75,9 +95,10 @@ export class AuthService {
         level: true,
       },
     });
+
+    const { password, ...safeUser } = user;
     return {
-      ...user,
-      password: undefined,
+      ...safeUser,
       skins: [],
       friends: [],
       gameHistory: [],
@@ -103,7 +124,7 @@ export class AuthService {
     }
     const { password: _removed, ...safeUser } = user;
     void _removed;
-
+    //token acceso
     const accessToken = this.jwtService.sign({ sub: user.id });
     return {
       accessToken,

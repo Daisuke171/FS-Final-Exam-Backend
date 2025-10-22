@@ -203,7 +203,6 @@ type Mutation {
   createGame(input: CreateGameInput!): Game!
   deleteGame(id: ID!): Game!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
-  createUser(data: CreateUserInput!): UserGraph!
   deleteUser(id: ID!): UserGraph!
   activateSkin(skinId: ID!, userId: ID!): UserSkin!
   unlockSkins(userId: ID!): [Skin!]!
@@ -256,17 +255,6 @@ input UpdateGameInput {
   duration: String
   maxPlayers: Int
   minPlayers: Int
-}
-
-input CreateUserInput {
-  name: String!
-  lastname: String!
-  username: String!
-  email: String!
-  nickname: String
-  password: String!
-  birthday: String!
-  levelId: Int!
 }
 
 input CreateLevelInput {
