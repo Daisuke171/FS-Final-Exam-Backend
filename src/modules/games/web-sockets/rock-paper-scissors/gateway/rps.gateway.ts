@@ -9,7 +9,13 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { RpsService } from '../rps.service';
-import { Moves, Game, StartingState, PlayingState } from '../states/rps.states';
+import {
+  Moves,
+  Game,
+  StartingState,
+  PlayingState,
+  FinishedState,
+} from '../states/rps.states';
 import { GamesService } from '@modules/games/games.service';
 import { UserService } from '@modules/user/user.service';
 import { JwtService } from '@nestjs/jwt';
@@ -48,6 +54,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private playerRooms: Map<string, string> = new Map();
   private playerInfo: Map<string, PlayerInfo> = new Map();
+  private disconnectionTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(
     private gameService: RpsService,
@@ -86,6 +93,40 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = userId;
       client.data.nickname = user.nickname;
 
+      const existingClientId = Array.from(this.playerInfo.entries()).find(
+        ([, info]) => info.userId === userId,
+      )?.[0];
+
+      if (existingClientId && this.disconnectionTimers.has(existingClientId)) {
+        console.log(
+          `♻️ Jugador ${user.nickname} reconectándose, cancelando timer`,
+        );
+
+        const timer = this.disconnectionTimers.get(existingClientId);
+        if (timer) {
+          clearTimeout(timer);
+          this.disconnectionTimers.delete(existingClientId);
+        }
+
+        const roomId = this.playerRooms.get(existingClientId);
+        if (roomId) {
+          this.playerRooms.delete(existingClientId);
+          this.playerRooms.set(client.id, roomId);
+          void client.join(roomId);
+
+          this.server.to(roomId).emit('playerReconnected', {
+            nickname: user.nickname,
+          });
+
+          const game = this.gameService.getGame(roomId);
+          if (game) {
+            this.emitGameState(roomId, game);
+          }
+        }
+
+        this.playerInfo.delete(existingClientId);
+      }
+
       this.playerInfo.set(client.id, {
         nickname: user.nickname || client.id,
         userId: userId,
@@ -104,22 +145,68 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Cliente desconectado: ${client.id}`);
-
     const roomId = this.playerRooms.get(client.id);
-    if (roomId) {
-      const game = this.gameService.getGame(roomId);
-      if (game) {
-        const playerInfo = this.playerInfo.get(client.id);
-        const nickname = playerInfo?.nickname || client.id;
-        game.disconnect(nickname);
-        game.clearReady(nickname);
-        if (game.players.size > 0) {
-          this.emitGameState(roomId, game);
-        }
-      }
-      this.playerRooms.delete(client.id);
+    if (!roomId) {
+      this.playerInfo.delete(client.id);
+      return;
     }
+
+    const game = this.gameService.getGame(roomId);
+    if (!game) {
+      this.playerRooms.delete(client.id);
+      this.playerInfo.delete(client.id);
+      return;
+    }
+
+    const playerInfo = this.playerInfo.get(client.id);
+    const nickname = playerInfo?.nickname || client.id;
+
+    const currentState = game.getCurrentState();
+    if (currentState === 'PlayingState' || currentState === 'RevealingState') {
+      console.log(
+        `⏱️ Jugador ${nickname} desconectado durante partida, iniciando contador de 10s`,
+      );
+
+      this.server.to(roomId).emit('playerDisconnected', {
+        nickname,
+        reconnectionTime: 10,
+      });
+
+      const timer = setTimeout(() => {
+        console.log(`❌ Tiempo agotado para ${nickname}`);
+
+        const currentGame = this.gameService.getGame(roomId);
+        if (!currentGame) {
+          this.disconnectionTimers.delete(client.id);
+          return;
+        }
+
+        const opponent = Array.from(currentGame.players.keys()).find(
+          (p) => p !== nickname,
+        );
+
+        if (opponent) {
+          this.handleAutoWin(roomId, opponent, nickname);
+        }
+
+        this.playerRooms.delete(client.id);
+        this.disconnectionTimers.delete(client.id);
+      }, 10000);
+
+      this.disconnectionTimers.set(client.id, timer);
+    } else {
+      console.log(`❌ Jugador ${nickname} desconectado fuera de partida`);
+      game.disconnect(nickname);
+      game.clearReady(nickname);
+      this.playerRooms.delete(client.id);
+
+      if (game.players.size > 0) {
+        this.emitGameState(roomId, game);
+      } else {
+        this.gameService.deleteGame(roomId);
+      }
+    }
+
     this.playerInfo.delete(client.id);
   }
 
@@ -130,6 +217,42 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId: '',
       }
     );
+  }
+
+  private handleAutoWin(
+    roomId: string,
+    winner: string,
+    disconnectedPlayer: string,
+  ) {
+    const game = this.gameService.getGame(roomId);
+    if (!game) return;
+
+    console.log(
+      `🏆 Victoria automática para ${winner} por desconexión de ${disconnectedPlayer}`,
+    );
+
+    game.setHP(disconnectedPlayer, 0);
+
+    const winnerHp = game.getHP(winner);
+
+    game.history.push({
+      round: game.history.length + 1,
+      player1Move: Moves.ROCK,
+      player2Move: Moves.ROCK,
+      winner: winner,
+      hpAfter: {
+        [winner]: winnerHp,
+        [disconnectedPlayer]: 0,
+      },
+    });
+
+    this.server.to(roomId).emit('playerDisconnectedTimeout', {
+      winner,
+      disconnectedPlayer,
+      reason: 'timeout',
+    });
+
+    game.setState(new FinishedState());
   }
 
   @SubscribeMessage('playerReadyForMatch')
@@ -319,6 +442,38 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     void client.join(data.roomId);
     this.playerRooms.set(client.id, data.roomId);
     this.emitGameState(data.roomId, game);
+  }
+
+  @SubscribeMessage('leaveRoom')
+  handleLeaveRoom(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    console.log(`Cliente ${client.id} quiere salir de la sala ${data.roomId}`);
+
+    const playerInfo = this.getPlayerInfo(client.id);
+    const nickname = playerInfo.nickname;
+    const game = this.gameService.getGame(data.roomId);
+
+    if (!game) {
+      client.emit('error', 'Juego no encontrado');
+      return;
+    }
+
+    game.disconnect(nickname);
+    game.clearReady(nickname);
+
+    void client.leave(data.roomId);
+
+    this.playerRooms.delete(client.id);
+
+    client.emit('leftRoom', { roomId: data.roomId });
+
+    if (game.players.size > 0) {
+      this.emitGameState(data.roomId, game);
+    } else {
+      this.gameService.deleteGame(data.roomId);
+    }
   }
 
   @SubscribeMessage('makeMove')
