@@ -165,7 +165,12 @@ type UserStats {
 
 type AuthResponse {
   accessToken: String!
+  refreshToken: String!
   user: UserGraph!
+}
+
+type RefreshResponse {
+  accessToken: String!
 }
 
 type ChatMessage {
@@ -184,12 +189,6 @@ type Query {
   userGames(gameId: ID): [GameHistory!]!
   leaderboard(gameId: ID!): Leaderboard!
   globalLeaderboard: Leaderboard!
-  userStats(userId: ID!, gameId: ID): UserStats!
-  userFavorites(userId: ID!): [GameFavorite!]!
-  users: [UserGraph!]!
-  me(userId: ID!): UserGraph!
-  userWithLevel(userId: ID!): UserGraph!
-  userSkinsWithStatus(userId: ID!): [SkinWithStatus!]!
   userStats(gameId: ID): UserStats!
   userFavorites: [GameFavorite!]!
   users: [UserGraph!]!
@@ -211,19 +210,12 @@ type Mutation {
   deleteGame(id: ID!): Game!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
   deleteUser(id: ID!): UserGraph!
-  activateSkin(skinId: ID!, userId: ID!): UserSkin!
-  unlockSkins(userId: ID!): [Skin!]!
-  addExperience(experience: Int!, userId: ID!): LevelUpResponse!
-  createLevel(data: CreateLevelInput!): Level!
-  createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
-  deleteLevel(id: Int!): Level!
-  register(registerInput: RegisterInput!): UserGraph!
-  login(loginInput: LoginInput!): AuthResponse!
   activateSkin(skinId: ID!): UserSkin!
   unlockSkins: [Skin!]!
   addExperience(experience: Int!): LevelUpResponse!
   register(registerInput: RegisterInput!): UserGraph!
   login(loginInput: LoginInput!): AuthResponse!
+  refreshToken(token: String!): RefreshResponse!
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   deleteLevel(id: Int!): Level!
@@ -266,31 +258,6 @@ input UpdateGameInput {
   minPlayers: Int
 }
 
-<<<<<<< HEAD
-=======
-input CreateUserInput {
-  name: String!
-  lastname: String!
-  username: String!
-  email: String!
-  nickname: String
-  password: String!
-  birthday: String!
-  levelId: Int!
-}
-
-<<<<<<< HEAD
->>>>>>> aed19ae4a7525e4138c86e311a8864bdc9781cf9
-input CreateLevelInput {
-  atomicNumber: Int!
-  name: String!
-  chemicalSymbol: String!
-  color: String!
-  experienceRequired: Int!
-}
-
-=======
->>>>>>> testing
 input RegisterInput {
   email: String!
   username: String!
