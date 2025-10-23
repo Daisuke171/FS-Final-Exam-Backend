@@ -1,32 +1,60 @@
-import { ObjectType, Field, ID, GraphQLISODateTime } from '@nestjs/graphql';
-import { User } from '../../user/models/user.model';
+import { ObjectType, Field, ID, GraphQLISODateTime, Int, Float } from '@nestjs/graphql';
+
+@ObjectType()
+export class SkinLite {
+  @Field(() => ID) 
+  id!: string;
+
+  @Field() 
+  name!: string;
+
+  @Field() 
+  img!: string;
+
+  @Field(() => Int) 
+  level!: number;
+
+  @Field(() => Float) 
+  value!: number;
+}
+
+@ObjectType()
+export class FriendEdgeUser {
+  @Field(() => ID) 
+  id!: string;
+
+  @Field() 
+  nickname!: string;
+
+  @Field(() => SkinLite, { nullable: true })
+  activeSkin?: SkinLite | null;
+}
 
 @ObjectType()
 export class Friend {
-  @Field(() => ID)
+  @Field(() => ID) 
   id!: string;
-
-  @Field()
+  @Field() 
   status!: string;
-
-  @Field()
+  @Field() 
   active!: boolean;
 
-  @Field(() => ID)
+  @Field(() => ID) 
   requesterId!: string;
 
-  @Field(() => ID)
+  @Field(() => ID) 
   receiverId!: string;
 
-  @Field(() => User, { nullable: true })
-  requester?: User;
+  @Field(() => FriendEdgeUser, { nullable: true }) 
+  requester?: FriendEdgeUser | null;
+  @Field(() => FriendEdgeUser, { nullable: true }) 
+  receiver?: FriendEdgeUser | null;
 
-  @Field(() => User, { nullable: true })
-  receiver?: User;
+  @Field(() => String, { nullable: true })
+  chatId?: string | null;
 
-  @Field(() => GraphQLISODateTime)
+  @Field(() => GraphQLISODateTime) 
   createdAt!: Date;
-
-  @Field(() => GraphQLISODateTime)
+  @Field(() => GraphQLISODateTime) 
   updatedAt!: Date;
 }

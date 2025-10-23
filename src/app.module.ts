@@ -47,7 +47,8 @@ import { CallsModule } from './modules/calls/calls.module';
       playground: true, // This enables the GraphQL Playground
       introspection: true,
       subscriptions: {
-        'graphql-ws': true
+        'graphql-ws': true,
+      
       },
     }),
   ],

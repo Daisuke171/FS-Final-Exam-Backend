@@ -43,7 +43,7 @@ export class ChatResolver {
     resolve: (payload) => payload.messageAdded,
   })
   messageAdded(@Args('chatId', { type: () => ID }) chatId: string) {
-    return pubSub.asyncIterator(`messageAdded:${chatId}`);
+    return pubSub.publish(`messageAdded:${chatId}`);
   }
 
   @Subscription(() => ChatMessage, {
@@ -51,6 +51,6 @@ export class ChatResolver {
     resolve: (payload) => payload.messageUpdated,
   })
   messageUpdated(@Args('chatId', { type: () => ID }) chatId: string) {
-    return pubSub.asyncIterator(`messageUpdated:${chatId}`);
+    return pubSub.publish(`messageUpdated:${chatId}`);
   }
 }

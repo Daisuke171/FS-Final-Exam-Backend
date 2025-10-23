@@ -108,14 +108,29 @@ scalar DateTime
 
 type Friend {
   active: Boolean!
+  chatId: String
   createdAt: DateTime!
   id: ID!
-  receiver: User
+  receiver: FriendEdgeUser
   receiverId: ID!
-  requester: User
+  requester: FriendEdgeUser
   requesterId: ID!
   status: String!
   updatedAt: DateTime!
+}
+
+type FriendEdgeUser {
+  activeSkin: SkinLite
+  id: ID!
+  nickname: String!
+}
+
+type FriendPeer {
+  active: Boolean!
+  chatId: ID
+  id: ID!
+  peer: FriendEdgeUser!
+  status: String!
 }
 
 enum FriendStatus {
@@ -232,6 +247,7 @@ type Mutation {
 }
 
 type Query {
+  friendPeersOfUser(userId: ID!): [FriendPeer!]!
   game(id: ID!): Game!
   games: [Game!]!
   globalLeaderboard: Leaderboard!
@@ -241,7 +257,7 @@ type Query {
   me(userId: String!): User!
   messages(chatId: ID!): [ChatMessage!]!
   myActiveCalls: [Call!]!
-  myFriends(userId: ID!): [Friend!]!
+  myHistoryFriends(userId: ID!): [Friend!]!
   skin(id: ID!): Skin!
   skins: [Skin!]!
   userFavorites(userId: ID!): [GameFavorite!]!
@@ -289,6 +305,14 @@ type Skin {
   name: String!
   updatedAt: DateTime!
   users: [User]
+  value: Float!
+}
+
+type SkinLite {
+  id: ID!
+  img: String!
+  level: Int!
+  name: String!
   value: Float!
 }
 
