@@ -1,5 +1,7 @@
 import {
   ConflictException,
+  HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -11,13 +13,19 @@ import { PrismaService } from 'prisma/prisma.service';
 import { UserService } from '../user/user.service';
 import { LoginInput } from '../auth/inputs/login.input';
 import { AuthResponse } from '../auth/responses/auth.response';
+import { getEnvNumber } from '@common/utils/env.util';
+import { sanitizeAuthResponse } from '@common/utils/sanitize.util';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    @Inject('JWT_REFRESH_SERVICE')
+    private readonly refreshJwtService: JwtService,
     private readonly userService: UserService,
+    private readonly configService: ConfigService,
   ) {}
 
   async register(data: RegisterInput) {
@@ -25,70 +33,66 @@ export class AuthService {
     const username = data.username.toLowerCase().trim();
     const nickname = data.nickname.trim();
 
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: data.email },
-          { username: data.username },
-          { nickname: data.nickname },
-        ],
-      },
-      select: { email: true, username: true, nickname: true },
-    });
+    try {
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          OR: [{ email }, { username }, { nickname }],
+        },
+        select: { email: true, username: true, nickname: true },
+      });
 
-    if (existingUser) {
-      const conflicts = {
-        email: 'El Email ya existe',
-        username: 'El Username ya existe',
-        nickname: 'El Nickname ya existe',
-      };
+      if (existingUser) {
+        const conflicts = {
+          email: 'El Email ya existe',
+          username: 'El Username ya existe',
+          nickname: 'El Nickname ya existe',
+        };
 
-      for (const key of Object.keys(conflicts)) {
-        if (existingUser[key] === (data as any)[key]) {
-          throw new ConflictException(conflicts[key]);
+        for (const key of Object.keys(conflicts)) {
+          if (existingUser[key] === (data as any)[key]) {
+            throw new ConflictException(conflicts[key]);
+          }
         }
       }
+
+      let initialLevel = await this.prisma.level.findFirst({
+        where: { experienceRequired: 0 },
+      });
+
+      if (!initialLevel) {
+        throw new InternalServerErrorException('Initial level not found');
+      }
+
+      const saltRounds = getEnvNumber('BCRYPT_SALT_ROUNDS');
+      const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+
+      const user = await this.prisma.user.create({
+        data: {
+          email,
+          username,
+          nickname,
+          name: data.name.trim(),
+          lastname: data.lastname.trim(),
+          birthday: new Date(data.birthday),
+          password: hashedPassword,
+          levelId: initialLevel.id,
+        },
+        include: {
+          level: true,
+        },
+      });
+
+      return sanitizeAuthResponse(user);
+    } catch (error: any) {
+      console.error('Register error:', error);
+      if (error.code === 'P2002') {
+        throw new ConflictException('User already exists');
+      }
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('No se pudo registrar el usuario');
     }
-
-    let initialLevel = await this.prisma.level.findFirst({
-      where: { experienceRequired: 0 },
-    });
-
-    if (!initialLevel) {
-      throw new InternalServerErrorException('Initial level not found');
-    }
-
-    const hashedPassword = await bcrypt.hash(
-      data.password,
-      Number(process.env.BCRYPT_SALT_ROUNDS) || 10,
-    );
-
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        username,
-        nickname,
-        name: data.name.trim(),
-        lastname: data.lastname.trim(),
-        birthday: new Date(data.birthday),
-        password: hashedPassword,
-        levelId: initialLevel.id,
-      },
-      include: {
-        level: true,
-      },
-    });
-
-    const { password, ...safeUser } = user;
-    return {
-      ...safeUser,
-      skins: [],
-      friends: [],
-      gameHistory: [],
-      gameFavorites: [],
-      notifications: [],
-      chats: [],
-    };
   }
 
   async login(loginInput: LoginInput): Promise<AuthResponse> {
@@ -99,8 +103,8 @@ export class AuthService {
     );
 
     try {
-      const user =
-        await this.userService.findByEmailOrUsername(usernameOrEmail);
+      const identifier = usernameOrEmail.toLowerCase().trim();
+      const user = await this.userService.findByEmailOrUsername(identifier);
 
       if (!user) {
         throw genericError;
@@ -112,24 +116,16 @@ export class AuthService {
         throw genericError;
       }
 
-      const { password: _removed, ...safeUser } = user;
-      void _removed;
-
       const accessToken = this.jwtService.sign({ sub: user.id });
+      const refreshToken = this.refreshJwtService.sign({ sub: user.id });
 
       return {
         accessToken,
-        user: {
-          ...safeUser,
-          friends: [],
-          gameHistory: [],
-          gameFavorites: [],
-          notifications: [],
-          chats: [],
-        },
+        refreshToken,
+        user: sanitizeAuthResponse(user),
       };
     } catch (error) {
-      console.error('FATAL INTERNAL ERROR AFTER PASSWORD CHECK:', error);
+      console.error('Login error:', error);
       if (error instanceof UnauthorizedException) {
         throw error;
       }
