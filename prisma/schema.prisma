@@ -42,7 +42,7 @@ model User {
 
 model Skin {
   id        String     @id @default(uuid())
-  name      String
+  name      String     @unique
   img       String
   level     Int
   value     Float
@@ -68,7 +68,7 @@ model UserSkin {
 
 model Level {
   id                 Int      @id @default(autoincrement())
-  atomicNumber       Int      @map("atomic_number")
+  atomicNumber       Int      @unique @map("atomic_number")
   name               String
   color              String
   chemicalSymbol     String   @map("chemical_symbol")
@@ -131,7 +131,7 @@ model FriendInvite {
 
 model Game {
   id          String         @id @default(uuid())
-  name        String
+  name        String         @unique
   description String
   rules       String
   gameLogo    String         @map("game_logo")

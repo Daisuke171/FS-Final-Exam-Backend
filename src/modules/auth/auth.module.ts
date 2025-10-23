@@ -1,24 +1,55 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaModule } from 'prisma/prisma.module';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
 import { AuthResolver } from './auth.resolver';
 import { AuthService } from './auth.service';
+import { UserModule } from '@modules/user/user.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { StringValue } from 'ms';
 
 @Module({
   imports: [
+    UserModule,
     PrismaModule,
     PassportModule,
+    ConfigModule.forRoot({
+      envFilePath: '.env',
+      isGlobal: true,
+    }),
     JwtModule.registerAsync({
-      useFactory: () => ({
-        secret: process.env.JWT_SECRET || 'secret',
-        signOptions: { expiresIn: '1d' },
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: (config.get<string>('JWT_EXPIRES_IN') ||
+            '15m') as StringValue,
+        },
       }),
     }),
   ],
-  providers: [JwtStrategy, GqlAuthGuard, AuthResolver, AuthService],
-  exports: [PassportModule, JwtModule, JwtStrategy, AuthService],
+  providers: [
+    JwtStrategy,
+    GqlAuthGuard,
+    AuthResolver,
+    AuthService,
+    {
+      provide: 'JWT_REFRESH_SERVICE',
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        return new JwtService({
+          secret: config.get<string>('JWT_REFRESH_SECRET'),
+          signOptions: {
+            expiresIn: (config.get<string>('JWT_REFRESH_EXPIRES_IN') ||
+              '7d') as StringValue,
+          },
+        });
+      },
+    },
+  ],
+  exports: [AuthService, JwtModule, JwtStrategy, GqlAuthGuard],
 })
 export class AuthModule {}

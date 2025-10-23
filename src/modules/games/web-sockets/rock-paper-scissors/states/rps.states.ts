@@ -1,5 +1,7 @@
+import { UserService } from '@modules/user/user.service';
 import { getRandomMove } from '../utils/getRandomMove';
 import { GamesService } from '@modules/games/games.service';
+import { getNextLevel } from '../utils/getNextLevel';
 
 export enum Moves {
   ROCK = 'piedra',
@@ -54,6 +56,7 @@ export class Game {
   private onRoomEmpty?: (roomId: string) => void;
   private cleanupTimer?: NodeJS.Timeout;
   public playerUserIds: Map<string, string> = new Map();
+  public isFinished: boolean = false;
   damageDealt: Map<string, number> = new Map();
   startTime: number = Date.now();
 
@@ -62,6 +65,7 @@ export class Game {
     roomConfig: RoomConfig,
     initialState: GameState,
     private gamesApiService: GamesService,
+    private usersService: UserService,
   ) {
     this.roomId = roomId;
     this.roomConfig = roomConfig;
@@ -77,6 +81,10 @@ export class Game {
 
   getGamesApiService(): GamesService {
     return this.gamesApiService;
+  }
+
+  getUsersService(): UserService {
+    return this.usersService;
   }
 
   recordDamage(playerId: string, damage: number) {
@@ -169,12 +177,33 @@ export class Game {
   }
 
   setState(newState: GameState): void {
+    if (
+      this.isFinished &&
+      !(newState instanceof FinishedState) &&
+      !(newState instanceof StartingState)
+    ) {
+      console.log(
+        `⚠️ Intento de cambiar a ${newState.constructor.name} después de finalizar, ignorando`,
+      );
+      return;
+    }
+
     if (this.state) {
       this.state.onExit?.(this);
     }
-    this.state = newState;
-    newState.onEnter(this);
 
+    this.state = newState;
+
+    if (newState instanceof FinishedState) {
+      this.isFinished = true;
+    }
+
+    if (newState instanceof StartingState && this.isFinished) {
+      console.log('♻️ Reiniciando juego desde FinishedState');
+      this.isFinished = false;
+    }
+
+    newState.onEnter(this);
     this.emitFullGameState();
   }
 
@@ -226,6 +255,11 @@ export class StartingState extends GameState {
   private timerId: NodeJS.Timeout | null = null;
   onEnter(game: Game): void {
     game.resetAllReady();
+    game.moves.clear();
+    game.history = [];
+    game.damageDealt.clear();
+    game.startTime = Date.now();
+
     for (const playerId of game.players.keys()) {
       game.setHP(playerId, 100);
     }
@@ -271,6 +305,7 @@ export class PlayingState extends GameState {
   private startTime = 0;
   onEnter(game: Game): void {
     this.playersReadyForMatch.clear();
+    this.gameStarted = false;
     console.log(
       `El juego ${game.roomId} está esperando que los clientes carguen la partida.`,
     );
@@ -470,52 +505,234 @@ export class FinishedState extends GameState {
       player2: { id: p2, move: game.moves.get(p2) || '' },
     };
     const gamesApiService = game.getGamesApiService();
+    const usersService = game.getUsersService();
     const duration = Math.floor((Date.now() - game.startTime) / 1000);
 
-    const userId1 =
-      game.playerUserIds.get(p1) || '4cf608e1-0c2c-46ea-a2bb-04a42d56f7e1';
-    const userId2 =
-      game.playerUserIds.get(p2) || '79176965-f4a8-40e3-a8af-007cc296085e';
+    const userId1 = game.playerUserIds.get(p1);
+    const userId2 = game.playerUserIds.get(p2);
+
+    if (!userId1 || !userId2) {
+      console.error(
+        'Error: No se encontró userId para alguno de los jugadores',
+      );
+      game.emit('gameOver', {
+        winner: null,
+        error: 'No se pudo guardar la partida',
+      });
+      return;
+    }
+
+    const gameId = 'e3163526-32ee-423a-9747-80cea7a00dc9';
+    const maxHp = 100;
+    let player1Score: number | null = null;
+    let player2Score: number | null = null;
 
     try {
-      await gamesApiService.saveGameResult({
-        userId: userId1,
-        gameId: userId2,
-        duration,
-        state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
-        score: this.calculateScore(hp1, game.history.length, winner === p1),
-        totalDamage: game.damageDealt.get(p1) || 0,
-      });
+      player1Score = this.calculateScore(
+        hp1,
+        hp2,
+        game.history.length,
+        winner === p1,
+        maxHp,
+      );
 
-      await gamesApiService.saveGameResult({
-        userId: '4cf608e1-0c2c-46ea-a2bb-04a42d56f7e1',
-        gameId: '79176965-f4a8-40e3-a8af-007cc296085e',
-        duration,
-        state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
-        score: this.calculateScore(hp2, game.history.length, winner === p2),
-        totalDamage: game.damageDealt.get(p2) || 0,
+      player2Score = this.calculateScore(
+        hp2,
+        hp1,
+        game.history.length,
+        winner === p2,
+        maxHp,
+      );
+
+      const player1Xp = this.calculateXpFromScore(player1Score, winner === p1);
+      const player2Xp = this.calculateXpFromScore(player2Score, winner === p2);
+
+      await gamesApiService.saveGameResult(
+        {
+          gameId: gameId,
+          duration,
+          state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
+          score: player1Score,
+          totalDamage: game.damageDealt.get(p1) || 0,
+        },
+        userId1,
+      );
+
+      await gamesApiService.saveGameResult(
+        {
+          gameId: gameId,
+          duration,
+          state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
+          score: player2Score,
+          totalDamage: game.damageDealt.get(p2) || 0,
+        },
+        userId2,
+      );
+
+      const user1Before = await usersService.getUserWithLevel(userId1);
+      const user2Before = await usersService.getUserWithLevel(userId2);
+
+      const player1XpResult = await usersService.addExperience(
+        userId1,
+        player1Xp,
+      );
+
+      const player2XpResult = await usersService.addExperience(
+        userId2,
+        player2Xp,
+      );
+
+      const player1LevelData = this.calculateLevelData(
+        user1Before,
+        player1XpResult,
+        player1Xp,
+      );
+
+      const player2LevelData = this.calculateLevelData(
+        user2Before,
+        player2XpResult,
+        player2Xp,
+      );
+
+      game.emit('gameOver', {
+        winner,
+        finalHealth: {
+          [p1]: hp1,
+          [p2]: hp2,
+        },
+        totalRounds: game.history.length,
+        scores: {
+          [p1]: player1Score,
+          [p2]: player2Score,
+        },
+        experienceResults: {
+          [p1]: player1LevelData,
+          [p2]: player2LevelData,
+        },
       });
     } catch (error) {
       console.error('Error al guardar el resultado de la partida:', error);
     }
-    game.emit('gameOver', {
-      winner,
-      finalHealth: {
-        [p1]: hp1,
-        [p2]: hp2,
-      },
-      totalRounds: game.history.length,
-    });
   }
 
-  private calculateScore(hp: number, rounds: number, won: boolean): number {
-    if (!won && hp <= 0) return 0;
+  private calculateLevelData(userBefore: any, xpResult: any, xpGained: number) {
+    const currentLevelXpRequired = userBefore.level.experienceRequired;
+    const experienceBefore = userBefore.experience;
+    const experienceAfter = xpResult.user.experience;
 
-    const baseScore = hp * 10;
-    const roundBonus = Math.max(0, 100 - rounds * 10);
-    const winBonus = won ? 200 : 0;
+    const xpInCurrentLevelBefore = experienceBefore - currentLevelXpRequired;
 
-    return baseScore + roundBonus + winBonus;
+    const nextLevel = getNextLevel(userBefore.level.atomicNumber + 1);
+    const nextLevelXpRequired = nextLevel?.experienceRequired || 99999;
+
+    const xpNeededForLevel = nextLevelXpRequired - currentLevelXpRequired;
+    const progressBefore = (xpInCurrentLevelBefore / xpNeededForLevel) * 100;
+
+    if (xpResult.leveledUp) {
+      const newLevelXpRequired = xpResult.user.level.experienceRequired;
+      const xpInNewLevel = experienceAfter - newLevelXpRequired;
+      const nextNextLevel = getNextLevel(xpResult.newLevel + 1);
+      const xpNeededForNewLevel =
+        (nextNextLevel?.experienceRequired || 99999) - newLevelXpRequired;
+      const progressAfter = (xpInNewLevel / xpNeededForNewLevel) * 100;
+
+      return {
+        xpGained,
+        leveledUp: true,
+        oldLevel: xpResult.previousLevel,
+        newLevel: xpResult.newLevel,
+        unlockedSkins: xpResult.unlockedSkins || [],
+
+        xpInCurrentLevelBefore,
+        xpNeededForLevelBefore: xpNeededForLevel,
+        progressBefore,
+
+        xpInCurrentLevelAfter: xpInNewLevel,
+        xpNeededForLevelAfter: xpNeededForNewLevel,
+        progressAfter,
+
+        oldLevelName: userBefore.level.name,
+        oldLevelSymbol: userBefore.level.chemicalSymbol,
+        oldLevelColor: userBefore.level.color,
+
+        newLevelName: xpResult.user.level.name,
+        newLevelSymbol: xpResult.user.level.chemicalSymbol,
+        newLevelColor: xpResult.user.level.color,
+      };
+    } else {
+      const xpInCurrentLevelAfter = experienceAfter - currentLevelXpRequired;
+      const progressAfter = (xpInCurrentLevelAfter / xpNeededForLevel) * 100;
+
+      return {
+        xpGained,
+        leveledUp: false,
+        oldLevel: xpResult.newLevel,
+        newLevel: xpResult.newLevel,
+        unlockedSkins: [],
+
+        xpInCurrentLevelBefore,
+        xpInCurrentLevelAfter,
+        xpNeededForLevel,
+        progressBefore,
+        progressAfter,
+
+        oldLevelName: userBefore.level.name,
+        oldLevelSymbol: userBefore.level.chemicalSymbol,
+        oldLevelColor: userBefore.level.color,
+        newLevelName: userBefore.level.name,
+        newLevelSymbol: userBefore.level.chemicalSymbol,
+        newLevelColor: userBefore.level.color,
+      };
+    }
+  }
+
+  private calculateScore(
+    playerHp: number,
+    opponentHp: number,
+    rounds: number,
+    won: boolean,
+    maxHp: number = 100,
+  ): number {
+    const playerHpPercent = (playerHp / maxHp) * 100;
+    const opponentHpPercent = (opponentHp / maxHp) * 100;
+    const damageDealtPercent = 100 - opponentHpPercent;
+
+    if (won) {
+      const hpScore = (playerHpPercent / 100) * 30;
+      const speedScore = Math.max(0, 15 - rounds);
+      const winBonus = 5;
+
+      const totalScore = hpScore + speedScore + winBonus;
+      return Math.min(50, Math.round(totalScore));
+    } else {
+      const damageScore = (damageDealtPercent / 100) * 25;
+      const resistanceScore = Math.max(0, 10 - Math.floor(rounds / 2));
+
+      if (damageDealtPercent >= 50) {
+        const totalScore = damageScore + resistanceScore;
+        return Math.round(totalScore);
+      }
+
+      if (damageDealtPercent > 0) {
+        const totalScore = damageScore + resistanceScore - 5;
+        return Math.max(-5, Math.round(totalScore));
+      }
+
+      return Math.max(-40, -20 - rounds * 2);
+    }
+  }
+  private calculateXpFromScore(score: number, won: boolean): number {
+    const baseXp = 10;
+
+    const performanceXp = Math.max(0, score);
+
+    const winBonus = won ? 20 : 0;
+
+    const completionBonus = 5;
+
+    const totalXp = baseXp + performanceXp + winBonus + completionBonus;
+
+    return Math.max(10, Math.min(85, totalXp));
   }
   handleJoin() {}
   handleMove() {}
@@ -523,5 +740,13 @@ export class FinishedState extends GameState {
     game.players.delete(playerId);
     game.hp.delete(playerId);
     console.log(`Jugador ${playerId} se desconectó del juego terminado`);
+    if (game.players.size === 0) {
+      console.log(
+        `🗑️ Todos los jugadores se desconectaron, eliminando juego ${game.roomId}`,
+      );
+      if (game['onRoomEmpty']) {
+        game['onRoomEmpty'](game.roomId);
+      }
+    }
   }
 }

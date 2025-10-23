@@ -4,11 +4,14 @@ import { Game } from './models/game.model';
 import { CreateGameInput } from './inputs/create-game.input';
 import { UpdateGameInput } from './inputs/update-game.input';
 import { SaveGameResultInput } from './inputs/save-game.input';
-import { ToggleFavoriteInput } from './inputs/togle-favorite.input';
 import { GameFavorite } from './models/game-favorite.model';
 import { Leaderboard } from './models/leaderboard.model';
 import { GameHistory } from './models/game-history.model';
 import { UserStats } from './models/user-stats.model';
+import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
+import { UserGraph } from '@modules/user/models/user.model';
+import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
+import { UseGuards } from '@nestjs/common';
 
 @Resolver(() => Game)
 export class GamesResolver {
@@ -24,12 +27,13 @@ export class GamesResolver {
     return this.gamesService.findOne(id);
   }
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => [GameHistory], { name: 'userGames' })
   async userGames(
-    @Args('userId', { type: () => ID }) userId: string,
-    @Args('gameId', { type: () => ID }) gameId?: string,
+    @CurrentUser() user: UserGraph,
+    @Args('gameId', { type: () => ID, nullable: true }) gameId?: string,
   ) {
-    return this.gamesService.getUserGameHistory(userId, gameId);
+    return this.gamesService.getUserGameHistory(user.id, gameId);
   }
 
   @Query(() => Leaderboard, { name: 'leaderboard' })
@@ -42,27 +46,37 @@ export class GamesResolver {
     return this.gamesService.getGlobalLeaderboard();
   }
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => UserStats, { name: 'userStats' })
   async getUserStats(
-    @Args('userId', { type: () => ID }) userId: string,
+    @CurrentUser() user: UserGraph,
+    @Args('gameId', { type: () => ID, nullable: true }) gameId?: string,
+  ) {
+    return this.gamesService.getUserStats(user.id, gameId);
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Query(() => [GameFavorite], { name: 'userFavorites' })
+  async getUserFavorites(@CurrentUser() user: UserGraph) {
+    return this.gamesService.getUserFavorites(user.id);
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean)
+  async toggleFavorite(
+    @CurrentUser() user: UserGraph,
     @Args('gameId', { type: () => ID }) gameId?: string,
   ) {
-    return this.gamesService.getUserStats(userId, gameId);
+    return this.gamesService.toggleFavorite(user.id, gameId);
   }
 
-  @Query(() => [GameFavorite], { name: 'userFavorites' })
-  async getUserFavorites(@Args('userId', { type: () => ID }) userId: string) {
-    return this.gamesService.getUserFavorites(userId);
-  }
-
-  @Mutation(() => Boolean)
-  async toggleFavorite(@Args('input') input: ToggleFavoriteInput) {
-    return this.gamesService.toggleFavorite(input);
-  }
-
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => GameHistory)
-  async saveGameResult(@Args('input') input: SaveGameResultInput) {
-    return this.gamesService.saveGameResult(input);
+  async saveGameResult(
+    @Args('input') input: SaveGameResultInput,
+    @CurrentUser() user: UserGraph,
+  ) {
+    return this.gamesService.saveGameResult(input, user.id);
   }
 
   @Mutation(() => Game)

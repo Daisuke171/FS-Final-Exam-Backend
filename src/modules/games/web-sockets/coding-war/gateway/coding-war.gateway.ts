@@ -19,6 +19,8 @@ interface StateProps {
   result?: unknown;
   history?: unknown;
   ready: Record<string, boolean>;
+  scores?: Record<string, number>;
+  problemIndex?: Record<string, number>;
   roomInfo: {
     id: string;
     name: string;
@@ -241,7 +243,6 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     void client.join(data.roomId);
     this.playerRooms.set(client.id, data.roomId);
     this.emitGameState(data.roomId, game);
-    console.log(this.emitGameState(data.roomId, game));
   }
 
   @SubscribeMessage('getPublicRooms')
@@ -286,6 +287,78 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('gameState', stateData);
   }
 
+  // === Real-time typing sync ===
+  @SubscribeMessage('typingProgress')
+  handleTypingProgress(
+    @MessageBody() data: { roomId: string; lineIndex: number; input: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      // Broadcast to others in the room
+      client.to(data.roomId).emit('typingUpdate', {
+        playerId: client.id,
+        lineIndex: data.lineIndex,
+        input: data.input,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  @SubscribeMessage('lineCommit')
+  handleLineCommit(
+    @MessageBody()
+    data: {
+      roomId: string;
+      lineIndex: number;
+      input: string; // final input for the committed line
+      isPerfect?: boolean;
+      score?: number;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      // Update authoritative score if provided
+      if (typeof data.score === 'number' && !Number.isNaN(data.score)) {
+        game.addScore(client.id, data.score);
+      }
+      client.to(data.roomId).emit('lineCommitted', {
+        playerId: client.id,
+        lineIndex: data.lineIndex,
+        input: data.input,
+        isPerfect: data.isPerfect ?? false,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  // Per-player problem progression: client notifies when it finished the last line of current problem
+  @SubscribeMessage('problemCompleted')
+  handleProblemCompleted(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      const current = game.problemIndex.get(client.id) ?? 0;
+      game.problemIndex.set(client.id, current + 1);
+      // Emit only to that player about their new index; also broadcast gameState so spectators see progression
+      this.server.to(client.id).emit('problemIndexUpdate', {
+        playerId: client.id,
+        problemIndex: current + 1,
+      });
+      this.emitGameState(data.roomId, game);
+    } catch {
+      // ignore
+    }
+  }
+
   private buildStateData(game: Game): StateProps {
     const stateData: StateProps = {
       state: game.getCurrentState(),
@@ -293,6 +366,8 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       playerCount: game.players.size,
       history: game.history,
       ready: Object.fromEntries(game.ready.entries()),
+      scores: Object.fromEntries(game.scores.entries()),
+      problemIndex: Object.fromEntries(game.problemIndex.entries()),
       roomInfo: {
         id: game.roomId,
         name: game.roomConfig.name,

@@ -1,9 +1,10 @@
-import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
+import { UserSkin } from '@modules/user-skins/models/user-skin.model';
+import { Field, Float, ID, Int, ObjectType } from '@nestjs/graphql';
 import { Level } from 'src/modules/level/models/level.model';
 
 @ObjectType()
-export class User {
-  @Field(() => String)
+export class UserGraph {
+  @Field(() => ID)
   id: string;
 
   @Field()
@@ -21,6 +22,9 @@ export class User {
   @Field()
   birthday: Date;
 
+  @Field(() => Float)
+  coins: number;
+
   @Field(() => Int)
   levelId: number;
 
@@ -31,8 +35,8 @@ export class User {
   nickname: string | null;
 
   // ¡¡Se esta usando string porque todavía no están los modelos
-  @Field(() => [String])
-  skins: string[];
+  @Field(() => [UserSkin], { nullable: true })
+  skins?: UserSkin[];
 
   @Field(() => [String])
   friends: string[];

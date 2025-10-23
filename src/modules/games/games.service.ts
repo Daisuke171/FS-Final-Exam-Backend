@@ -3,7 +3,6 @@ import { PrismaService } from 'prisma/prisma.service';
 import { CreateGameInput } from './inputs/create-game.input';
 import { UpdateGameInput } from './inputs/update-game.input';
 import { SaveGameResultInput } from './inputs/save-game.input';
-import { ToggleFavoriteInput } from './inputs/togle-favorite.input';
 
 @Injectable()
 export class GamesService {
@@ -74,7 +73,7 @@ export class GamesService {
 
   // Historial
 
-  async saveGameResult(input: SaveGameResultInput) {
+  async saveGameResult(input: SaveGameResultInput, userId: string) {
     const game = await this.prisma.game.findUnique({
       where: { id: input.gameId },
     });
@@ -83,19 +82,38 @@ export class GamesService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: { id: input.userId },
+      where: { id: userId },
     });
     if (!user) {
-      throw new NotFoundException(`User with ID ${input.userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    const currentScore = await this.prisma.gameHistory.aggregate({
+      where: { userId },
+      _sum: { score: true },
+    });
+
+    const userTotalScore = currentScore._sum.score || 0;
+
+    // 2. Calcular el nuevo total
+    let scoreToSave = input.score;
+    const newTotal = userTotalScore + input.score;
+
+    // 3. Si el nuevo total sería negativo, ajustar
+    if (newTotal < 0) {
+      // Solo restar hasta dejar en 0
+      scoreToSave = -userTotalScore;
+      console.log(
+        `⚠️ Score ajustado: ${input.score} → ${scoreToSave} (para evitar total negativo)`,
+      );
     }
 
     return this.prisma.gameHistory.create({
       data: {
         gameId: input.gameId,
-        userId: input.userId,
+        userId,
         duration: input.duration,
         state: input.state,
-        score: input.score,
+        score: scoreToSave,
         totalDamage: input.totalDamage,
       },
       include: {
@@ -165,6 +183,11 @@ export class GamesService {
             nickname: true,
             name: true,
             lastname: true,
+            level: {
+              select: {
+                atomicNumber: true,
+              },
+            },
           },
         });
         const wins = await this.prisma.gameHistory.count({
@@ -182,6 +205,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
+          level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };
       }),
@@ -223,6 +247,11 @@ export class GamesService {
             nickname: true,
             name: true,
             lastname: true,
+            level: {
+              select: {
+                atomicNumber: true,
+              },
+            },
           },
         });
         const wins = await this.prisma.gameHistory.count({
@@ -240,6 +269,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
+          level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };
       }),
@@ -297,12 +327,19 @@ export class GamesService {
     const totalDraws = games.filter((g) => g.state === 'draw').length;
     const winRate = (totalWins / totalGames) * 100;
 
-    // Tiempo total jugado (en minutos)
-    const totalMinutes = games.reduce((sum, g) => sum + g.duration, 0);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    const totalTime = `${hours}h ${minutes}m`;
+    const totalSeconds = games.reduce((sum, g) => sum + g.duration, 0);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
 
+    let totalTime = '';
+    if (hours > 0) {
+      totalTime = `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      totalTime = `${minutes}m ${seconds}s`;
+    } else {
+      totalTime = `${seconds}s`;
+    }
     // Mejor puntuación
     const highScore = Math.max(...games.map((g) => g.score));
 
@@ -351,11 +388,11 @@ export class GamesService {
 
   // Favoritos
 
-  async toggleFavorite(input: ToggleFavoriteInput) {
+  async toggleFavorite(userId, gameId) {
     const existing = await this.prisma.gameFavorite.findFirst({
       where: {
-        userId: input.userId,
-        gameId: input.gameId,
+        userId,
+        gameId,
       },
     });
 
@@ -367,8 +404,8 @@ export class GamesService {
     } else {
       await this.prisma.gameFavorite.create({
         data: {
-          userId: input.userId,
-          gameId: input.gameId,
+          userId,
+          gameId,
         },
       });
       return { isFavorite: true, message: 'Added to favorites' };

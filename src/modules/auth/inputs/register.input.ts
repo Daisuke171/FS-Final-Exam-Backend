@@ -5,30 +5,43 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  Matches,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 @InputType()
 export class RegisterInput {
   @Field()
   @IsEmail()
+  @Transform(({ value }) => value.toLowerCase().trim())
   email: string;
 
   @Field()
   @IsString()
   @MinLength(6)
   @MaxLength(10)
+  @Matches(/^(?!.*__)[a-zA-Z0-9_]+$/, {
+    message: 'Solo letras, números y se permite un solo guion bajo',
+  })
   username: string;
 
   @Field()
   @IsString()
   @MinLength(6)
   @MaxLength(10)
+  @Matches(/^(?!.*__)[a-zA-Z0-9_]+$/, {
+    message: 'Solo letras, números y se permite un solo guion bajo',
+  })
   nickname: string;
 
   @Field()
   @IsString()
   @MinLength(6)
   @MaxLength(16)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, {
+    message:
+      'La contraseña debe incluir mayúscula, minúscula, número y caracter especial',
+  })
   password: string;
 
   @Field()
