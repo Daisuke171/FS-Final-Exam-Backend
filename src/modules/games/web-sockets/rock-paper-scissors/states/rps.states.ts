@@ -56,6 +56,7 @@ export class Game {
   private onRoomEmpty?: (roomId: string) => void;
   private cleanupTimer?: NodeJS.Timeout;
   public playerUserIds: Map<string, string> = new Map();
+  public isFinished: boolean = false;
   damageDealt: Map<string, number> = new Map();
   startTime: number = Date.now();
 
@@ -176,12 +177,33 @@ export class Game {
   }
 
   setState(newState: GameState): void {
+    if (
+      this.isFinished &&
+      !(newState instanceof FinishedState) &&
+      !(newState instanceof StartingState)
+    ) {
+      console.log(
+        `⚠️ Intento de cambiar a ${newState.constructor.name} después de finalizar, ignorando`,
+      );
+      return;
+    }
+
     if (this.state) {
       this.state.onExit?.(this);
     }
-    this.state = newState;
-    newState.onEnter(this);
 
+    this.state = newState;
+
+    if (newState instanceof FinishedState) {
+      this.isFinished = true;
+    }
+
+    if (newState instanceof StartingState && this.isFinished) {
+      console.log('♻️ Reiniciando juego desde FinishedState');
+      this.isFinished = false;
+    }
+
+    newState.onEnter(this);
     this.emitFullGameState();
   }
 
@@ -718,5 +740,13 @@ export class FinishedState extends GameState {
     game.players.delete(playerId);
     game.hp.delete(playerId);
     console.log(`Jugador ${playerId} se desconectó del juego terminado`);
+    if (game.players.size === 0) {
+      console.log(
+        `🗑️ Todos los jugadores se desconectaron, eliminando juego ${game.roomId}`,
+      );
+      if (game['onRoomEmpty']) {
+        game['onRoomEmpty'](game.roomId);
+      }
+    }
   }
 }
