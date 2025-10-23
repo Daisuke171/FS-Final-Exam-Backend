@@ -12,7 +12,7 @@
     "start:dev": "nest start --watch",
     "seed": "ts-node prisma/seed.ts",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node  ../dist/main.js",
+    "start:prod": "node dist/src/main.js",
     "debug:dirs": "find . -maxdepth 1 -type d",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
