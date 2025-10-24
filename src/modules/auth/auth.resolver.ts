@@ -4,7 +4,7 @@ import { LoginInput } from './inputs/login.input';
 import { AuthResponse } from './responses/auth.response';
 import { UserGraph } from '@modules/user/models/user.model';
 import { RegisterInput } from './inputs/register.input';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException, Inject, UseGuards } from '@nestjs/common';
 import { RefreshResponse } from './responses/refresh.response';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -34,7 +34,7 @@ export class AuthResolver {
   @Mutation(() => RefreshResponse)
   async refreshToken(@Args('token') token: string): Promise<RefreshResponse> {
     try {
-      const payload = this.refreshJwtService.verify(token);
+      const payload = await this.refreshJwtService.verify(token);
       const accessToken = this.jwtService.sign({ sub: payload.sub });
       return { accessToken };
     } catch {

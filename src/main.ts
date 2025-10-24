@@ -18,6 +18,6 @@ async function bootstrap() {
   });
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  await app.listen(process.env.PORT ?? 3008);
+  await app.listen(process.env.PORT ?? 3010);
 }
 void bootstrap();

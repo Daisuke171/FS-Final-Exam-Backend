@@ -55,7 +55,7 @@ export class AuthService {
         }
       }
 
-      let initialLevel = await this.prisma.level.findFirst({
+      const initialLevel = await this.prisma.level.findFirst({
         where: { experienceRequired: 0 },
       });
 

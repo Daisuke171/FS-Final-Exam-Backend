@@ -258,17 +258,6 @@ input UpdateGameInput {
   minPlayers: Int
 }
 
-input CreateUserInput {
-  name: String!
-  lastname: String!
-  username: String!
-  email: String!
-  nickname: String
-  password: String!
-  birthday: String!
-  levelId: Int!
-}
-
 input RegisterInput {
   email: String!
   username: String!
