@@ -13,11 +13,16 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: [
+      'https://fs-final-exam-frontend.vercel.app', // frontend Vercel
+      'http://localhost:3000',
+    ],
     credentials: true,
   });
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  await app.listen(process.env.PORT ?? 3008);
+  const port = process.env.PORT ?? 3010;
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Server running on port ${port}`);
 }
 void bootstrap();
