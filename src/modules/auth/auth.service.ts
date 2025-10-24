@@ -116,13 +116,25 @@ export class AuthService {
         throw genericError;
       }
 
+      const { password: _password, ...safeUser } = user;
+      void _password;
+
       const accessToken = this.jwtService.sign({ sub: user.id });
       const refreshToken = this.refreshJwtService.sign({ sub: user.id });
+
+      console.log('Login exitoso para el usuario:', user.skins);
 
       return {
         accessToken,
         refreshToken,
-        user: sanitizeAuthResponse(user),
+        user: {
+          ...safeUser,
+          friends: [],
+          gameHistory: [],
+          gameFavorites: [],
+          notifications: [],
+          chats: [],
+        },
       };
     } catch (error) {
       console.error('Login error:', error);

@@ -1,12 +1,10 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import * as bcrypt from 'bcrypt';
 import type { User, Skin } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
