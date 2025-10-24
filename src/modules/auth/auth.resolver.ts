@@ -1,14 +1,12 @@
-import { Resolver, Mutation, Args, Query } from '@nestjs/graphql';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
 import { LoginInput } from './inputs/login.input';
 import { AuthResponse } from './responses/auth.response';
 import { UserGraph } from '@modules/user/models/user.model';
 import { RegisterInput } from './inputs/register.input';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, Inject, UseGuards } from '@nestjs/common';
+import { UnauthorizedException, Inject } from '@nestjs/common';
 import { RefreshResponse } from './responses/refresh.response';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { GqlAuthGuard } from './guards/gql-auth.guard';
 
 @Resolver()
 export class AuthResolver {
@@ -40,11 +38,5 @@ export class AuthResolver {
     } catch {
       throw new UnauthorizedException('Refresh token inválido o expirado');
     }
-  }
-
-  @Query(() => UserGraph)
-  @UseGuards(GqlAuthGuard)
-  me(@CurrentUser() user: UserGraph) {
-    return user;
   }
 }
