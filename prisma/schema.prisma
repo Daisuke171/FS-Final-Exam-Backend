@@ -227,6 +227,7 @@ model Notification {
   userId    String   @map("user_id")
   type      String
   entity    String
+  isRead    Boolean  @default(false) @map("is_read")
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

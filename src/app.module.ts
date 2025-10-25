@@ -13,6 +13,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { CommonModule } from './common/common.module';
 import { ConfigModule } from '@nestjs/config';
 import { CodingWarModule } from '@modules/games/web-sockets/coding-war/coding-war.module';
+import { HomeModule } from './modules/home/home.module'; 
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CodingWarModule } from '@modules/games/web-sockets/coding-war/coding-wa
     ChatModule,
     CommonModule,
     CodingWarModule,
+    HomeModule,
   ],
   controllers: [],
   providers: [],

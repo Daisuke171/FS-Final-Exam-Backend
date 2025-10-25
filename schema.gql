@@ -183,6 +183,31 @@ type ChatMessage {
   timestamp: DateTime!
 }
 
+type GameSummary {
+  id: ID!
+  name: String!
+  gameLogo: String
+}
+
+type NotificationSummary {
+  unreadCount: Float!
+}
+
+type MessageSummary {
+  unreadCount: Float!
+}
+
+type DashboardOutput {
+  """Lista de juegos o misiones disponibles"""
+  games: [GameSummary!]!
+
+  """Conteo de notificaciones no leídas"""
+  notifications: NotificationSummary!
+
+  """Conteo de mensajes de chat no leídos"""
+  messages: MessageSummary!
+}
+
 type Query {
   games: [Game!]!
   game(id: ID!): Game!
@@ -201,6 +226,7 @@ type Query {
   skin(id: ID!): Skin!
   userSkins: [UserSkin!]!
   messages(chatId: ID!): [ChatMessage!]!
+  getHomeDashboard: DashboardOutput!
 }
 
 type Mutation {
