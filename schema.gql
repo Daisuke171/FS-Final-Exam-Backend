@@ -170,7 +170,7 @@ type AuthResponse {
 }
 
 type RefreshResponse {
-  accessToken: String!
+  refreshToken: String!
 }
 
 type ChatMessage {
@@ -215,7 +215,9 @@ type Mutation {
   addExperience(experience: Int!): LevelUpResponse!
   register(registerInput: RegisterInput!): UserGraph!
   login(loginInput: LoginInput!): AuthResponse!
-  refreshToken(token: String!): RefreshResponse!
+  rotateRefreshToken(RefreshOldToken: String!): RefreshResponse!
+  refreshAccessToken(refreshToken: String!): AuthResponse!
+  logout: Boolean!
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   deleteLevel(id: Int!): Level!
