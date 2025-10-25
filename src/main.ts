@@ -23,11 +23,11 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: ['http://localhost:3000', ' http://172.27.14.122:3000', 'https://lwmdlzms-3000.brs.devtunnels.ms/'],
     credentials: true,
   });
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  await app.listen(process.env.PORT ?? 3008);
+  await app.listen(process.env.PORT ?? 3010);
 }
 void bootstrap();

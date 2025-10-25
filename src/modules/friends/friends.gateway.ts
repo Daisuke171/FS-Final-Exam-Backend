@@ -7,21 +7,26 @@ import { Server, Socket } from 'socket.io';
 import { ObservableService } from '@common/observable.service';
 import { FriendsService } from './friends.service'; // servicio que da friends
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+  cors: { origin: ['*', 'http://localhost:3000'],
+    credentials: false,
+   },
+   transports: ['websocket']
+})
 export class FriendsGateway implements OnGatewayInit {
   @WebSocketServer() server!: Server;
 
-  // conexiones por userId (soporta múltiples pestañas)
+  // conexiones por userId
   private connCount = new Map<string, number>();
 
   constructor(
     private readonly bus: ObservableService,
-    private readonly friends: FriendsService,   // ⬅️ lo definimos abajo
+    private readonly friends: FriendsService,  
   ) {}
 
   afterInit() {
-    // Si ya emitís notificaciones por bus, podés mantenerlo
-    this.bus.events$.subscribe((e) => {
+    console.log('[WS] /friends init');
+      this.bus.events$.subscribe((e) => {
       if (e.type === 'notification') {
         const notify = e.data as any;
         if (typeof notify?.type === 'string' && notify.type.startsWith('friend:')) {
@@ -31,7 +36,6 @@ export class FriendsGateway implements OnGatewayInit {
     });
   }
 
-  /** El cliente llama una vez por sesión para identificar usuario y entrar a su room */
   @SubscribeMessage('auth')
   async handleAuth(
     @MessageBody() data: { userId: string },
@@ -73,10 +77,8 @@ export class FriendsGateway implements OnGatewayInit {
 
   /** Detectar disconnect y broadcast "offline" si quedó en 0 */
   async handleDisconnect(client: Socket) {
-    // El cliente no nos mandó userId en disconnect; lo normal es persistirlo en "data" del socket al auth.
-    // Guardemos el último auth en client.data.userId
     const userId: string | undefined = client.data?.userId;
-
+console.log('[WS] /friends disconnect', { userId });
     if (userId) {
       const n = Math.max((this.connCount.get(userId) ?? 1) - 1, 0);
       this.connCount.set(userId, n);
