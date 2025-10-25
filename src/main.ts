@@ -21,7 +21,7 @@ async function bootstrap() {
   });
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = process.env.PORT ?? 3010;
+  const port = process.env.PORT ?? 3011;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Server running on port ${port}`);
 }
