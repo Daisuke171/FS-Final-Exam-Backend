@@ -11,6 +11,8 @@ import { Server, Socket } from 'socket.io';
 import { CWService } from '../coding-war.service';
 import { Game, StartingState, PlayingState } from '../states/coding-war.states';
 import { GamesService } from 'src/modules/games/games.service';
+import { UserService } from '@modules/user/user.service';
+import { JwtService } from '@nestjs/jwt';
 
 interface StateProps {
   state: string;
@@ -41,14 +43,70 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private playerRooms: Map<string, string> = new Map();
+  private playerInfo: Map<string, { nickname: string; userId: string }> = new Map();
 
   constructor(
     private gameService: CWService,
     private gameApiService: GamesService,
+    private usersService: UserService,
+    private jwtService: JwtService,
   ) {}
 
-  handleConnection(client: Socket) {
-    console.log(`Cliente conectado: ${client.id}`);
+  async handleConnection(client: Socket) {
+    try {
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace('Bearer ', '');
+
+      console.log(`[CW Gateway] Cliente conectando: ${client.id}`);
+      console.log(`[CW Gateway] Token presente: ${!!token}, primeros 20 chars:`, token ? token.substring(0, 20) + '...' : 'N/A');
+
+      if (!token) {
+        console.warn(`[CW Gateway] Token no proporcionado para ${client.id}`);
+        client.emit('error', { message: 'Token no proporcionado' });
+        client.disconnect();
+        return;
+      }
+
+      const payload = await this.jwtService.verifyAsync(token);
+      console.log(`[CW Gateway] Token verificado para ${client.id}, userId:`, payload.sub);
+      
+      const userId = payload.sub;
+      if (!userId) {
+        console.warn(`[CW Gateway] No se encontró userId en payload para ${client.id}`);
+        client.disconnect();
+        return;
+      }
+
+      const user = await this.usersService.getMe(userId);
+      if (!user) {
+        console.warn(`[CW Gateway] Usuario no encontrado en DB para userId: ${userId}`);
+        client.disconnect();
+        return;
+      }
+
+      this.playerInfo.set(client.id, {
+        nickname: user.nickname || client.id,
+        userId,
+      });
+
+      console.log(`[CW Gateway] ✅ Cliente autenticado: ${client.id} (${user.nickname})`);
+      client.emit('authenticated', {
+        userId,
+        nickname: user.nickname,
+        socketId: client.id,
+      });
+    } catch (error) {
+      const err = error as any;
+      console.error('[CW Gateway] ❌ Error en autenticación de WebSocket (Coding War):', err.message || error);
+      if (err.name === 'TokenExpiredError') {
+        console.error('[CW Gateway] Token expirado');
+      } else if (err.name === 'JsonWebTokenError') {
+        console.error('[CW Gateway] Token inválido');
+      }
+      client.emit('error', { message: 'Error de autenticación' });
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -66,6 +124,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       this.playerRooms.delete(client.id);
     }
+    this.playerInfo.delete(client.id);
   }
 
   @SubscribeMessage('playerReadyForMatch')
@@ -103,10 +162,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const playingState = game['state'] as PlayingState;
-      if (
-        playingState &&
-        typeof playingState.handlePlayerReady === 'function'
-      ) {
+      if (playingState && typeof playingState.handlePlayerReady === 'function') {
         playingState.handlePlayerReady(client.id, game);
       }
     } catch (error) {
@@ -156,6 +212,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roomId,
       roomConfig,
       this.gameApiService,
+      this.usersService,
     );
     game.setEmitCallback((event, payload) => {
       this.server.to(roomId).emit(event, payload);
@@ -166,6 +223,10 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     game.join(client.id);
+    const info = this.playerInfo.get(client.id);
+    if (info?.userId) {
+      game.playerUserIds.set(client.id, info.userId);
+    }
 
     void client.join(roomId);
     this.playerRooms.set(client.id, roomId);
@@ -240,6 +301,10 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
     this.server.to(client.id).emit('joinRoomSuccess', { roomId: data.roomId });
     game.join(client.id);
+    const info = this.playerInfo.get(client.id);
+    if (info?.userId) {
+      game.playerUserIds.set(client.id, info.userId);
+    }
     void client.join(data.roomId);
     this.playerRooms.set(client.id, data.roomId);
     this.emitGameState(data.roomId, game);
