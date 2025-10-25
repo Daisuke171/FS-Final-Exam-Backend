@@ -1,7 +1,12 @@
 import {
-  WebSocketGateway, WebSocketServer,
-  OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect,
-  SubscribeMessage, ConnectedSocket, MessageBody,
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { OnModuleDestroy } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
@@ -16,8 +21,12 @@ const room = (chatId: string) => `chat:${chatId}`;
   cors: { origin: '*', credentials: true },
 })
 export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
-
+  implements
+    OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnModuleDestroy
+{
   @WebSocketServer() server!: Server;
 
   private users = new Map<string, { id: string; username?: string }>();
