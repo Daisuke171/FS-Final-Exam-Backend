@@ -7,6 +7,9 @@ import { RegisterInput } from './inputs/register.input';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException, Inject } from '@nestjs/common';
 import { RefreshResponse } from './responses/refresh.response';
+import { UseGuards } from '@nestjs/common';
+import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
+import { Context } from '@nestjs/graphql';
 
 @Resolver()
 export class AuthResolver {
@@ -30,13 +33,22 @@ export class AuthResolver {
   }
 
   @Mutation(() => RefreshResponse)
-  async refreshToken(@Args('token') token: string): Promise<RefreshResponse> {
-    try {
-      const payload = await this.refreshJwtService.verify(token);
-      const accessToken = this.jwtService.sign({ sub: payload.sub });
-      return { accessToken };
-    } catch {
-      throw new UnauthorizedException('Refresh token inválido o expirado');
-    }
+  async rotateRefreshToken(@Args('RefreshOldToken') oldToken: string) {
+    const newToken = await this.authService.rotateRefreshToken(oldToken);
+    return { refreshToken: newToken };
+  }
+
+  @Mutation(() => AuthResponse)
+  async refreshAccessToken(@Args('refreshToken') refreshToken: string) {
+    return this.authService.refreshAccessToken(refreshToken);
+  }
+
+  // auth.resolver.ts
+  @Mutation(() => Boolean)
+  @UseGuards(GqlAuthGuard)
+  async logout(@Context() ctx) {
+    const userId = ctx.req.user.id;
+    await this.authService.revokeAllRefreshTokens(userId);
+    return true;
   }
 }
