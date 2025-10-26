@@ -8,21 +8,21 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { CWService } from '../coding-war.service';
-import { Game, StartingState, PlayingState } from '../states/coding-war.states';
+import { TDService } from '../turing-detective.service';
+import { Game, StartingState } from '../states/turing-detective.states';
 import { GamesService } from 'src/modules/games/games.service';
 import { UserService } from '@modules/user/user.service';
 import { JwtService } from '@nestjs/jwt';
 
 interface StateProps {
   state: string;
-  players: string[];
+  players: Array<{ id: string; nickname?: string; score?: number }>;
   playerCount: number;
-  result?: unknown;
-  history?: unknown;
+  currentRound?: number;
+  totalRounds?: number;
+  chatMessages?: Array<{ sender: string; message: string; timestamp: number; isAI?: boolean }>;
+  roundResults?: unknown;
   ready: Record<string, boolean>;
-  scores?: Record<string, number>;
-  problemIndex?: Record<string, number>;
   roomInfo: {
     id: string;
     name: string;
@@ -30,15 +30,16 @@ interface StateProps {
     currentPlayers: number;
     isPrivate: boolean;
   };
+  result?: unknown;
 }
 
 @WebSocketGateway({
-  namespace: '/coding-war',
+  namespace: '/turing-detective',
   cors: {
     origin: '*',
   },
 })
-export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -47,7 +48,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     new Map();
 
   constructor(
-    private gameService: CWService,
+    private gameService: TDService,
     private gameApiService: GamesService,
     private usersService: UserService,
     private jwtService: JwtService,
@@ -59,14 +60,14 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.handshake.auth?.token ||
         client.handshake.headers?.authorization?.replace('Bearer ', '');
 
-      console.log(`[CW Gateway] Cliente conectando: ${client.id}`);
+      console.log(`[TD Gateway] Cliente conectando: ${client.id}`);
       console.log(
-        `[CW Gateway] Token presente: ${!!token}, primeros 20 chars:`,
+        `[TD Gateway] Token presente: ${!!token}, primeros 20 chars:`,
         token ? token.substring(0, 20) + '...' : 'N/A',
       );
 
       if (!token) {
-        console.warn(`[CW Gateway] Token no proporcionado para ${client.id}`);
+        console.warn(`[TD Gateway] Token no proporcionado para ${client.id}`);
         client.emit('error', { message: 'Token no proporcionado' });
         client.disconnect();
         return;
@@ -74,14 +75,14 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const payload = await this.jwtService.verifyAsync(token);
       console.log(
-        `[CW Gateway] Token verificado para ${client.id}, userId:`,
+        `[TD Gateway] Token verificado para ${client.id}, userId:`,
         payload.sub,
       );
 
       const userId = payload.sub;
       if (!userId) {
         console.warn(
-          `[CW Gateway] No se encontró userId en payload para ${client.id}`,
+          `[TD Gateway] No se encontró userId en payload para ${client.id}`,
         );
         client.disconnect();
         return;
@@ -90,7 +91,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const user = await this.usersService.getMe(userId);
       if (!user) {
         console.warn(
-          `[CW Gateway] Usuario no encontrado en DB para userId: ${userId}`,
+          `[TD Gateway] Usuario no encontrado en DB para userId: ${userId}`,
         );
         client.disconnect();
         return;
@@ -102,7 +103,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       console.log(
-        `[CW Gateway] ✅ Cliente autenticado: ${client.id} (${user.nickname})`,
+        `[TD Gateway] ✅ Cliente autenticado: ${client.id} (${user.nickname})`,
       );
       client.emit('authenticated', {
         userId,
@@ -112,13 +113,13 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       const err = error as any;
       console.error(
-        '[CW Gateway] ❌ Error en autenticación de WebSocket (Coding War):',
+        '[TD Gateway] ❌ Error en autenticación de WebSocket (Turing Detective):',
         err.message || error,
       );
       if (err.name === 'TokenExpiredError') {
-        console.error('[CW Gateway] Token expirado');
+        console.error('[TD Gateway] Token expirado');
       } else if (err.name === 'JsonWebTokenError') {
-        console.error('[CW Gateway] Token inválido');
+        console.error('[TD Gateway] Token inválido');
       }
       client.emit('error', { message: 'Error de autenticación' });
       client.disconnect();
@@ -143,52 +144,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.playerInfo.delete(client.id);
   }
 
-  @SubscribeMessage('playerReadyForMatch')
-  handlePlayerReadyForMatch(
-    @MessageBody() data: { roomId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    try {
-      const game = this.gameService.getGame(data.roomId);
-
-      if (!game) {
-        console.error(
-          `[playerReadyForMatch] Juego no encontrado: ${data.roomId}`,
-        );
-        client.emit('error', { message: 'Juego no encontrado' });
-        return;
-      }
-
-      if (!game.players.has(client.id)) {
-        console.error(
-          `[playerReadyForMatch] Jugador ${client.id} no está en el juego`,
-        );
-        client.emit('error', { message: 'No estás en este juego' });
-        return;
-      }
-
-      const currentState = game.getCurrentState();
-      console.log(`[playerReadyForMatch] Estado actual: ${currentState}`);
-
-      if (currentState !== 'PlayingState') {
-        console.warn(
-          `[playerReadyForMatch] Estado incorrecto: ${currentState}`,
-        );
-        return;
-      }
-
-      const playingState = game['state'] as PlayingState;
-      if (
-        playingState &&
-        typeof playingState.handlePlayerReady === 'function'
-      ) {
-        playingState.handlePlayerReady(client.id, game);
-      }
-    } catch (error) {
-      console.error('[playerReadyForMatch] Error:', error);
-      client.emit('error', { message: 'Error al procesar ready' });
-    }
-  }
+  // playerReadyForMatch removed — not applicable for Turing Detective
 
   @SubscribeMessage('confirmReady')
   handleConfirmReady(
@@ -221,10 +177,14 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const roomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
+    // Build a complete RoomConfig with sensible defaults for Turing Detective
     const roomConfig = {
       name: data.roomName,
       isPrivate: data.isPrivate,
       password: data.password,
+      totalRounds: 5,
+      chatDuration: 60,
+      votingDuration: 15,
     };
 
     const game = this.gameService.createGame(
@@ -371,87 +331,22 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('gameState', stateData);
   }
 
-  // === Real-time typing sync ===
-  @SubscribeMessage('typingProgress')
-  handleTypingProgress(
-    @MessageBody() data: { roomId: string; lineIndex: number; input: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    try {
-      const game = this.gameService.getGame(data.roomId);
-      if (!game || !game.players.has(client.id)) return;
-      // Broadcast to others in the room
-      client.to(data.roomId).emit('typingUpdate', {
-        playerId: client.id,
-        lineIndex: data.lineIndex,
-        input: data.input,
-      });
-    } catch {
-      // ignore
-    }
-  }
-
-  @SubscribeMessage('lineCommit')
-  handleLineCommit(
-    @MessageBody()
-    data: {
-      roomId: string;
-      lineIndex: number;
-      input: string; // final input for the committed line
-      isPerfect?: boolean;
-      score?: number;
-    },
-    @ConnectedSocket() client: Socket,
-  ) {
-    try {
-      const game = this.gameService.getGame(data.roomId);
-      if (!game || !game.players.has(client.id)) return;
-      // Update authoritative score if provided
-      if (typeof data.score === 'number' && !Number.isNaN(data.score)) {
-        game.addScore(client.id, data.score);
-      }
-      client.to(data.roomId).emit('lineCommitted', {
-        playerId: client.id,
-        lineIndex: data.lineIndex,
-        input: data.input,
-        isPerfect: data.isPerfect ?? false,
-      });
-    } catch {
-      // ignore
-    }
-  }
-
-  // Per-player problem progression: client notifies when it finished the last line of current problem
-  @SubscribeMessage('problemCompleted')
-  handleProblemCompleted(
-    @MessageBody() data: { roomId: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    try {
-      const game = this.gameService.getGame(data.roomId);
-      if (!game || !game.players.has(client.id)) return;
-      const current = game.problemIndex.get(client.id) ?? 0;
-      game.problemIndex.set(client.id, current + 1);
-      // Emit only to that player about their new index; also broadcast gameState so spectators see progression
-      this.server.to(client.id).emit('problemIndexUpdate', {
-        playerId: client.id,
-        problemIndex: current + 1,
-      });
-      this.emitGameState(data.roomId, game);
-    } catch {
-      // ignore
-    }
-  }
+  // Typing-related events removed — Turing Detective uses chat and voting
 
   private buildStateData(game: Game): StateProps {
     const stateData: StateProps = {
       state: game.getCurrentState(),
-      players: Array.from(game.players.keys()),
+      players: Array.from(game.players.values()).map((p) => ({
+        id: p.id,
+        nickname: p.nickname,
+        score: p.score,
+      })),
       playerCount: game.players.size,
-      history: game.history,
+      currentRound: game.currentRound,
+      totalRounds: game.roomConfig.totalRounds,
+      chatMessages: game.chatMessages,
+      roundResults: game.roundResults,
       ready: Object.fromEntries(game.ready.entries()),
-      scores: Object.fromEntries(game.scores.entries()),
-      problemIndex: Object.fromEntries(game.problemIndex.entries()),
       roomInfo: {
         id: game.roomId,
         name: game.roomConfig.name,
@@ -459,10 +354,8 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
         currentPlayers: game.players.size,
         isPrivate: game.roomConfig.isPrivate,
       },
+      result: game.result,
     };
-    if (game.result) {
-      stateData.result = game.result;
-    }
     return stateData;
   }
 
