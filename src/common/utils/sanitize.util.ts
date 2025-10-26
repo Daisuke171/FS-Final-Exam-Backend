@@ -1,7 +1,8 @@
 import { User, Level } from '@prisma/client';
 
 export function sanitizeAuthResponse(user: User & { level: Level }) {
-  const { password, ...safeUser } = user;
+  const { password: _password, ...safeUser } = user;
+  void _password;
   return {
     ...safeUser,
     skins: [],

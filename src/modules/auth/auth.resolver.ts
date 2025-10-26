@@ -5,7 +5,7 @@ import { AuthResponse } from './responses/auth.response';
 import { UserGraph } from '@modules/user/models/user.model';
 import { RegisterInput } from './inputs/register.input';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, Inject } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { RefreshResponse } from './responses/refresh.response';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
@@ -48,7 +48,30 @@ export class AuthResolver {
   @UseGuards(GqlAuthGuard)
   async logout(@Context() ctx) {
     const userId = ctx.req.user.id;
-    await this.authService.revokeAllRefreshTokens(userId);
-    return true;
+
+    if (!userId) {
+      console.error(
+        '[Auth] Error: No se encontró userId en el contexto de la request.',
+      );
+      throw new Error('Usuario no autenticado correctamente.');
+    }
+
+    try {
+      await this.authService.revokeAllRefreshTokens(userId);
+
+      console.log(
+        `[Auth] Tokens revocados exitosamente para userId: ${userId}`,
+      );
+      return true;
+    } catch (error) {
+      console.error(
+        `[Auth] Fallo al revocar tokens para userId: ${userId}`,
+        error,
+      );
+
+      throw new Error(
+        `Error al cerrar sesión: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }

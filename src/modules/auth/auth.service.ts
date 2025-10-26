@@ -160,7 +160,7 @@ export class AuthService {
   async validateRefreshToken(token: string): Promise<string> {
     try {
       // Verificar firma del JWT
-      const payload = this.refreshJwtService.verify(token) as { sub: string };
+      const payload = this.refreshJwtService.verify(token);
 
       // Buscar en DB
       const stored = await this.prisma.refreshToken.findUnique({
