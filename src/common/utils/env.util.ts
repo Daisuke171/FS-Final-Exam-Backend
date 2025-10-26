@@ -6,7 +6,7 @@ export function getEnvNumber(key: string): number {
 
   if (!value || isNaN(value)) {
     throw new InternalServerErrorException(
-    `configuracion invalida: la variable: ${key} debe ser un numero`,
+      `configuracion invalida: la variable: ${key} debe ser un numero`,
     );
   }
 

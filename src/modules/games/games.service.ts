@@ -26,6 +26,14 @@ export class GamesService {
     return game;
   }
 
+  async findByName(name: string) {
+    const game = await this.prisma.game.findFirst({ where: { name } });
+    if (!game) {
+      throw new NotFoundException(`Game with name ${name} not found`);
+    }
+    return game;
+  }
+
   async createGame(input: CreateGameInput) {
     return this.prisma.game.create({
       data: {

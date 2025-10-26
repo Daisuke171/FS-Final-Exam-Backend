@@ -1,12 +1,10 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import * as bcrypt from 'bcrypt';
 import type { User, Skin } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
@@ -75,7 +73,9 @@ export class UserService {
         coins: true,
         level: true,
         createdAt: true,
-
+        birthday: true,
+        levelId: true,
+        updatedAt: true,
         skins: {
           include: {
             skin: true, // brings full Skin info
@@ -118,7 +118,7 @@ export class UserService {
       throw new BadRequestException('Falta el email o username');
     }
 
-    const normalized = identifier.trim().toLowerCase();
+    const normalized = identifier.trim();
 
     const user = await this.prisma.user.findFirst({
       where: {
