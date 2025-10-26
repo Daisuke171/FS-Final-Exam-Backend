@@ -6,7 +6,7 @@ export class AuthResponse {
   @Field()
   accessToken!: string;
 
-@Field()
+  @Field()
   refreshToken: string;
 
   @Field(() => UserGraph)

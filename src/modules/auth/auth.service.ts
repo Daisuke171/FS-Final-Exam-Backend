@@ -55,7 +55,7 @@ export class AuthService {
         }
       }
 
-      let initialLevel = await this.prisma.level.findFirst({
+      const initialLevel = await this.prisma.level.findFirst({
         where: { experienceRequired: 0 },
       });
 
@@ -103,26 +103,50 @@ export class AuthService {
     );
 
     try {
-      const identifier = usernameOrEmail.toLowerCase().trim();
+      const identifier = usernameOrEmail.trim();
       const user = await this.userService.findByEmailOrUsername(identifier);
 
       if (!user) {
+        console.warn(`Login fallido: no se encontró usuario con ${identifier}`);
         throw genericError;
       }
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
+        console.warn(
+          `Login fallido: contraseña incorrecta para usuario ${user.username}`,
+        );
         throw genericError;
       }
+
+      const { password: _password, ...safeUser } = user;
+      void _password;
 
       const accessToken = this.jwtService.sign({ sub: user.id });
       const refreshToken = this.refreshJwtService.sign({ sub: user.id });
 
+      await this.prisma.refreshToken.create({
+        data: {
+          token: refreshToken,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+        },
+      });
+
+      console.log('Login exitoso para el usuario:', user.skins);
+
       return {
         accessToken,
         refreshToken,
-        user: sanitizeAuthResponse(user),
+        user: {
+          ...safeUser,
+          friends: [],
+          gameHistory: [],
+          gameFavorites: [],
+          notifications: [],
+          chats: [],
+        },
       };
     } catch (error) {
       console.error('Login error:', error);
@@ -131,5 +155,78 @@ export class AuthService {
       }
       throw genericError;
     }
+  }
+
+  async validateRefreshToken(token: string): Promise<string> {
+    try {
+      // Verificar firma del JWT
+      const payload = this.refreshJwtService.verify(token);
+
+      // Buscar en DB
+      const stored = await this.prisma.refreshToken.findUnique({
+        where: { token },
+      });
+
+      if (!stored || stored.revoked) {
+        throw new UnauthorizedException('Refresh token inválido o revocado');
+      }
+
+      return payload.sub; // userId
+    } catch {
+      throw new UnauthorizedException('Refresh token inválido o expirado');
+    }
+  }
+
+  //metodo por si el token del usuario esta expuesto
+  async rotateRefreshToken(oldToken: string): Promise<string> {
+    const userId = await this.validateRefreshToken(oldToken);
+
+    // Revoca el token viejo
+    await this.prisma.refreshToken.updateMany({
+      where: { token: oldToken },
+      data: { revoked: true },
+    });
+
+    // Crear uno nuevo
+    const newToken = this.refreshJwtService.sign({ sub: userId });
+
+    await this.prisma.refreshToken.create({
+      data: { token: newToken, userId },
+    });
+
+    return newToken;
+  }
+
+  async revokeAllRefreshTokens(userId: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revoked: false },
+      data: { revoked: true },
+    });
+  }
+
+  async refreshAccessToken(refreshToken: string): Promise<AuthResponse> {
+    const userId = await this.validateRefreshToken(refreshToken);
+
+    // Generar un nuevo accessToken
+    const accessToken = this.jwtService.sign({ sub: userId });
+
+    // Rotar el refreshToken (invalida el viejo y crea uno nuevo)
+    const newRefreshToken = await this.rotateRefreshToken(refreshToken);
+
+    // Buscar al usuario para devolverlo en la respuesta
+    const user = await this.userService.findOne(userId);
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        ...user,
+        friends: [],
+        gameHistory: [],
+        gameFavorites: [],
+        notifications: [],
+        chats: [],
+      },
+    };
   }
 }

@@ -1,14 +1,15 @@
-import { Resolver, Mutation, Args, Query } from '@nestjs/graphql';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
 import { LoginInput } from './inputs/login.input';
 import { AuthResponse } from './responses/auth.response';
 import { UserGraph } from '@modules/user/models/user.model';
 import { RegisterInput } from './inputs/register.input';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, Inject, UseGuards } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Inject } from '@nestjs/common';
 import { RefreshResponse } from './responses/refresh.response';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { GqlAuthGuard } from './guards/gql-auth.guard';
+import { UseGuards } from '@nestjs/common';
+import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
+import { Context } from '@nestjs/graphql';
 
 @Resolver()
 export class AuthResolver {
@@ -32,19 +33,45 @@ export class AuthResolver {
   }
 
   @Mutation(() => RefreshResponse)
-  async refreshToken(@Args('token') token: string): Promise<RefreshResponse> {
-    try {
-      const payload = this.refreshJwtService.verify(token);
-      const accessToken = this.jwtService.sign({ sub: payload.sub });
-      return { accessToken };
-    } catch {
-      throw new UnauthorizedException('Refresh token inválido o expirado');
-    }
+  async rotateRefreshToken(@Args('RefreshOldToken') oldToken: string) {
+    const newToken = await this.authService.rotateRefreshToken(oldToken);
+    return { refreshToken: newToken };
   }
 
-  @Query(() => UserGraph)
+  @Mutation(() => AuthResponse)
+  async refreshAccessToken(@Args('refreshToken') refreshToken: string) {
+    return this.authService.refreshAccessToken(refreshToken);
+  }
+
+  // auth.resolver.ts
+  @Mutation(() => Boolean)
   @UseGuards(GqlAuthGuard)
-  me(@CurrentUser() user: UserGraph) {
-    return user;
+  async logout(@Context() ctx) {
+    const userId = ctx.req.user.id;
+
+    if (!userId) {
+      console.error(
+        '[Auth] Error: No se encontró userId en el contexto de la request.',
+      );
+      throw new Error('Usuario no autenticado correctamente.');
+    }
+
+    try {
+      await this.authService.revokeAllRefreshTokens(userId);
+
+      console.log(
+        `[Auth] Tokens revocados exitosamente para userId: ${userId}`,
+      );
+      return true;
+    } catch (error) {
+      console.error(
+        `[Auth] Fallo al revocar tokens para userId: ${userId}`,
+        error,
+      );
+
+      throw new Error(
+        `Error al cerrar sesión: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }

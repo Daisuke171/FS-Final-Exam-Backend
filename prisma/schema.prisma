@@ -36,6 +36,8 @@ model User {
   callsReceived         Call[]         @relation("CallsAsCallee")
   createdAt             DateTime       @default(now()) @map("created_at")
   updatedAt             DateTime       @updatedAt @map("updated_at")
+  // Relacion de RefreshToken
+  refreshTokens         RefreshToken[]
 
   @@map("users")
 }
@@ -272,4 +274,14 @@ model Call {
   @@index([calleeId])
   @@index([status])
   @@map("calls")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime?
+  revoked   Boolean   @default(false)
 }

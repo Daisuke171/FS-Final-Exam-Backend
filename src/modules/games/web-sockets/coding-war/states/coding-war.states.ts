@@ -1,4 +1,5 @@
 import { GamesService } from 'src/modules/games/games.service';
+import { UserService } from '@modules/user/user.service';
 
 export abstract class GameState {
   abstract handleJoin(playerId: string, game: Game): void;
@@ -37,6 +38,8 @@ export class Game {
   public history: unknown[] = [];
   public result?: GameResult;
   public ready: Map<string, boolean> = new Map();
+  public playerUserIds: Map<string, string> = new Map();
+  public startTime: number = Date.now();
 
   private emitCallback?: (event: string, data: any) => void;
   private onRoomEmpty?: (roomId: string) => void;
@@ -47,6 +50,7 @@ export class Game {
     roomConfig: RoomConfig,
     initialState: GameState,
     private readonly _gamesApiService: GamesService,
+    private readonly _usersService: UserService,
   ) {
     this.roomId = roomId;
     this.roomConfig = roomConfig;
@@ -63,6 +67,12 @@ export class Game {
   }
   emit(event: string, data: any) {
     this.emitCallback?.(event, data);
+  }
+  getGamesApiService(): GamesService {
+    return this._gamesApiService;
+  }
+  getUsersService(): UserService {
+    return this._usersService;
   }
   cleanup() {
     this.cancelCleanupTimer();
@@ -225,6 +235,7 @@ export class PlayingState extends GameState {
   private startGame(game: Game) {
     this.gameStarted = true;
     this.startTime = Date.now();
+    game.startTime = this.startTime;
     game.emit('timerStart', { duration: this.ROUND_TIME });
     game.emit('matchStart', {});
 
@@ -254,7 +265,7 @@ export class PlayingState extends GameState {
 }
 
 export class FinishedState extends GameState {
-  onEnter(game: Game): void {
+  async onEnter(game: Game) {
     // Decide winner by higher score; tie allowed
     const [p1, p2] = Array.from(game.players.keys());
     const s1 = p1 ? (game.scores.get(p1) ?? 0) : 0;
@@ -273,6 +284,57 @@ export class FinishedState extends GameState {
       winner,
       finalScores: Object.fromEntries(game.scores.entries()),
     };
+
+    // Persist results and XP similar to RPS
+    try {
+      const gamesApiService = game.getGamesApiService();
+      const usersService = game.getUsersService();
+      const duration = Math.floor((Date.now() - game.startTime) / 1000);
+
+      // Resolve gameId by name to avoid hardcoding
+      const cwGame = await gamesApiService.findByName('Code War');
+      const gameId = cwGame.id;
+
+      const userId1 = p1 ? game.playerUserIds.get(p1) : undefined;
+      const userId2 = p2 ? game.playerUserIds.get(p2) : undefined;
+
+      if (p1 && userId1) {
+        const state1 = winner === p1 ? 'won' : winner === null ? 'draw' : 'lost';
+        const score1 = Math.round(s1);
+        await gamesApiService.saveGameResult(
+          {
+            gameId,
+            duration,
+            state: state1 as any,
+            score: score1,
+            totalDamage: 0,
+          },
+          userId1,
+        );
+        const xp1 = this.calculateXpFromScore(score1, state1 === 'won');
+        await usersService.addExperience(userId1, xp1);
+      }
+      if (p2 && userId2) {
+        const state2 = winner === p2 ? 'won' : winner === null ? 'draw' : 'lost';
+        const score2 = Math.round(s2);
+        await gamesApiService.saveGameResult(
+          {
+            gameId,
+            duration,
+            state: state2 as any,
+            score: score2,
+            totalDamage: 0,
+          },
+          userId2,
+        );
+        const xp2 = this.calculateXpFromScore(score2, state2 === 'won');
+        await usersService.addExperience(userId2, xp2);
+      }
+    } catch (err) {
+      // log and continue
+      // eslint-disable-next-line no-console
+      console.error('Error saving Coding War result:', err);
+    }
 
     game.emit('gameOver', {
       winner,
@@ -294,6 +356,14 @@ export class FinishedState extends GameState {
       // Transition back to Waiting so joinRoom and ready flow work again
       game.setState(new WaitingState());
     }, 1500);
+  }
+  private calculateXpFromScore(score: number, won: boolean): number {
+    const baseXp = 10;
+    const performanceXp = Math.max(0, Math.floor(score / 2));
+    const winBonus = won ? 20 : 0;
+    const completionBonus = 5;
+    const total = baseXp + performanceXp + winBonus + completionBonus;
+    return Math.max(10, Math.min(85, total));
   }
   handleJoin(): void {}
   handleMove(): void {}
