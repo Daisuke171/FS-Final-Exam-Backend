@@ -13,7 +13,7 @@ model User {
   lastname              String
   email                 String         @unique
   username              String         @unique
-  password              String
+  password              String?
   birthday              DateTime
   nickname              String?        @unique @default("guest")
   experience            Int            @default(0)
@@ -38,6 +38,7 @@ model User {
   updatedAt             DateTime       @updatedAt @map("updated_at")
   // Relacion de RefreshToken
   refreshTokens         RefreshToken[]
+  googleId              String?        @unique
 
   @@map("users")
 }
