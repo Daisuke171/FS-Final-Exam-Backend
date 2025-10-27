@@ -232,12 +232,14 @@ type Mutation {
   deleteUser(id: ID!): UserGraph!
   endCall(callId: ID!): Call!
   login(loginInput: LoginInput!): AuthResponse!
+  logout: Boolean!
   markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
-  refreshToken(token: String!): RefreshResponse!
+  refreshAccessToken(refreshToken: String!): AuthResponse!
   register(registerInput: RegisterInput!): UserGraph!
   rejectCall(callId: ID!): Call!
   removeFriend(id: ID!): Boolean!
   requestFriendByUsername(input: RequestFriendByUsernameInput!): Friend!
+  rotateRefreshToken(RefreshOldToken: String!): RefreshResponse!
   saveGameResult(input: SaveGameResultInput!): GameHistory!
   sendMessage(input: SendMessageInput!): ChatMessage!
   startCall(calleeId: ID!, sdpOffer: String!): Call!
@@ -272,7 +274,7 @@ type Query {
 }
 
 type RefreshResponse {
-  accessToken: String!
+  refreshToken: String!
 }
 
 input RegisterInput {
