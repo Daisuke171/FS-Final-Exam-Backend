@@ -17,19 +17,9 @@ export class TDService {
     gamesApiService: GamesService,
     usersService: UserService,
   ): Game {
-    // Set defaults for Turing Detective if not provided
-    const config: RoomConfig = {
-      name: roomConfig.name,
-      isPrivate: roomConfig.isPrivate,
-      password: roomConfig.password,
-      totalRounds: roomConfig.totalRounds || 5,
-      chatDuration: roomConfig.chatDuration || 60,
-      votingDuration: roomConfig.votingDuration || 15,
-    };
-
     const game = new Game(
       roomId,
-      config,
+      roomConfig,
       new WaitingState(),
       gamesApiService,
       usersService,
@@ -71,17 +61,15 @@ export class TDService {
     }> = [];
 
     this.games.forEach((game, roomId) => {
-      const cfg = (game as any).config as RoomConfig | undefined;
       if (
-        cfg &&
-        !cfg.isPrivate &&
+        !game.roomConfig.isPrivate &&
         game.getCurrentState() === 'WaitingState' &&
         game.players.size > 0 &&
         game.players.size < 2
       ) {
         publicRooms.push({
           id: roomId,
-          name: cfg.name,
+          name: game.roomConfig.name,
           currentPlayers: game.players.size,
           maxPlayers: 2,
           state: game.getCurrentState(),

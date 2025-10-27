@@ -10,10 +10,13 @@ import { SkinsModule } from './modules/skins/skins.module';
 import { UserSkinModule } from './modules/user-skins/user-skins.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { FriendsModule } from './modules/friends/friends.module';
 import { CommonModule } from './common/common.module';
 import { ConfigModule } from '@nestjs/config';
 import { CodingWarModule } from '@modules/games/web-sockets/coding-war/coding-war.module';
 import { TuringDetectiveModule } from '@modules/games/web-sockets/turing-detective/turing-detective.module';
+import { join } from 'path';
+import { CallsModule } from './modules/calls/calls.module';
 
 @Module({
   imports: [
@@ -22,8 +25,13 @@ import { TuringDetectiveModule } from '@modules/games/web-sockets/turing-detecti
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: 'schema.gql',
+      autoSchemaFile: join(process.cwd(), 'src/graphql/schema.gql'), // or true for in-memory schema
+      sortSchema: true,
       playground: true,
+      introspection: true,
+      subscriptions: {
+        'graphql-ws': true,
+      },
     }),
     RpsModule,
     GamesModule,
@@ -32,8 +40,10 @@ import { TuringDetectiveModule } from '@modules/games/web-sockets/turing-detecti
     AuthModule,
     SkinsModule,
     UserSkinModule,
-    UploadsModule,
+    FriendsModule,
     ChatModule,
+    CallsModule,
+    UploadsModule,
     CommonModule,
     CodingWarModule,
     TuringDetectiveModule,

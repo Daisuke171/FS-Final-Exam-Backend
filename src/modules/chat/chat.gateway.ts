@@ -8,98 +8,130 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
+import { OnModuleDestroy } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { ObservableService } from '@common/observable.service';
+import { Subscription } from 'rxjs';
+
+const room = (chatId: string) => `chat:${chatId}`;
 
 @WebSocketGateway({
-  namespace: '/chat',
-  cors: {
-    origin: [
-      'https://fs-final-exam-frontend.vercel.app',
-      'http://localhost:3000',
-    ],
-    credentials: true,
-  },
+  origin: [
+    'https://fs-final-exam-frontend.vercel.app',
+    'http://localhost:3000',
+  ],
+  credentials: true,
 })
 export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+  implements
+    OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnModuleDestroy
 {
   @WebSocketServer() server!: Server;
 
-  // map simple de usuario con socket
-  private users = new Map<string, { id: string; username: string }>();
+  private users = new Map<string, { id: string; username?: string }>();
+  private busSub?: Subscription;
 
   constructor(
     private readonly chat: ChatService,
     private readonly bus: ObservableService,
   ) {}
 
-  afterInit(server: Server) {
-    // escuchar bus y reenviar a chat correspondiente
-    this.bus.events$.subscribe((e) => {
+  afterInit() {
+    this.busSub = this.bus.events$.subscribe((e) => {
       if (e.type === 'chatMessage') {
-        const message = e.data as { chatId: string };
-        this.server.to(`chat-${message.chatId}`).emit('newMessage', e.data);
+        const m = e.data as { chatId: string };
+        this.server.to(room(m.chatId)).emit('chat:new', e.data);
+      }
+      if (e.type === 'chatMessageUpdated') {
+        const m = e.data as { chatId: string; id: string; read: boolean };
+        this.server.to(room(m.chatId)).emit('chat:read', {
+          chatId: m.chatId,
+          messageId: m.id,
+          read: m.read,
+        });
       }
     });
   }
 
-  handleConnection(client: Socket) {
-    console.log('connected', client.id);
+  onModuleDestroy() {
+    this.busSub?.unsubscribe();
+  }
+
+  handleConnection() {
+    // Si usás JWT en handshake: decodificar y setear users map acá
+    // const user = decode(client.handshake.auth?.token)
+    // this.users.set(client.id, { id: user.sub, username: user.name })
   }
 
   handleDisconnect(client: Socket) {
     this.users.delete(client.id);
-    console.log('disconnected', client.id);
   }
 
-  @SubscribeMessage('set_user')
+  // Solo si aún no hay auth en handshake
+  @SubscribeMessage('chat:set_user')
   setUser(
     @ConnectedSocket() client: Socket,
-    @MessageBody() user: { id: string; username: string },
+    @MessageBody() user: { id: string; username?: string },
   ) {
     this.users.set(client.id, user);
+    client.emit('chat:user_set', { ok: true });
   }
 
-  @SubscribeMessage('join_chat')
-  joinChat(@ConnectedSocket() client: Socket, @MessageBody() chatId: string) {
-    const user = this.users.get(client.id);
-    if (!user) return client.emit('error', { message: 'set_user first' });
-    client.join(`chat-${chatId}`);
+  @SubscribeMessage('chat:join')
+  async joinChat(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { chatId }: { chatId: string },
+  ) {
+    this.ensureUser(client);
+    await client.join(room(chatId));
+
+    const last = await this.chat.getMessages(chatId);
+    client.emit('chat:history', last);
   }
 
-  @SubscribeMessage('send_message')
+  @SubscribeMessage('chat:leave')
+  async leaveChat(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { chatId }: { chatId: string },
+  ) {
+    this.ensureUser(client);
+    await client.leave(room(chatId));
+  }
+
+  @SubscribeMessage('chat:send')
   async sendMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: { chatId: string; message: string },
+    @MessageBody() { chatId, text }: { chatId: string; text: string },
   ) {
-    const user = this.users.get(client.id);
-    if (!user) return client.emit('error', { message: 'set_user first' });
+    const user = this.ensureUser(client);
     const saved = await this.chat.sendMessage({
-      chatId: body.chatId,
+      chatId,
       senderId: user.id,
-      message: body.message,
+      message: text,
     });
-    // respuesta directa al emisor
-    client.emit('sent', saved);
+
+    client.emit('chat:sent', saved);
   }
 
-  @SubscribeMessage('get_messages')
-  async getMessages(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { chatId: string },
-  ) {
-    const messages = await this.chat.getMessages(data.chatId);
-    client.emit('messages', messages);
-  }
-
-  @SubscribeMessage('read_message')
+  @SubscribeMessage('chat:read')
   async readMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { chatId: string; messageId: string },
+    @MessageBody() { chatId, messageId }: { chatId: string; messageId: string },
   ) {
-    const message = await this.chat.markRead(data.chatId, data.messageId);
-    this.server.to(`chat-${data.chatId}`).emit('message_read', message);
+    this.ensureUser(client);
+    await this.chat.markRead(chatId, messageId);
+  }
+
+  private ensureUser(client: Socket) {
+    const user = this.users.get(client.id);
+    if (!user) {
+      client.emit('chat:error', { message: 'Auth required (set_user or JWT)' });
+      throw new Error('Unauthorized socket');
+    }
+    return user;
   }
 }

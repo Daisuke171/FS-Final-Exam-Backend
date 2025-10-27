@@ -5,7 +5,17 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  app.enableCors({
+    origin: [
+      'http://localhost:3000', // Next.js
+      // agrega otros orígenes si hace falta
+    ],
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length'],
+    optionsSuccessStatus: 204, // evita 400 en preflight
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -21,7 +31,7 @@ async function bootstrap() {
   });
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = process.env.PORT ?? 3011;
+  const port = process.env.PORT ?? 3010;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Server running on port ${port}`);
 }

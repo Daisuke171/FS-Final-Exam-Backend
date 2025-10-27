@@ -11,47 +11,17 @@ export abstract class GameState {
 export interface Player {
   id: string;
   socketId: string;
-  nickname: string;
-  score: number;
-  guesses: OpponentType[];
-}
-
-export enum OpponentType {
-  HUMAN = 'HUMAN',
-  AI = 'AI',
-}
-
-export interface ChatMessage {
-  sender: string;
-  message: string;
-  timestamp: number;
-  isAI?: boolean;
-}
-
-export interface RoundResult {
-  roundNumber: number;
-  opponentType: OpponentType;
-  player1Guess: OpponentType | null;
-  player2Guess: OpponentType | null;
-  player1Correct: boolean;
-  player2Correct: boolean;
-  player1Score: number;
-  player2Score: number;
 }
 
 export interface RoomConfig {
   name: string;
   isPrivate: boolean;
   password?: string;
-  totalRounds: number;
-  chatDuration: number; // in seconds
-  votingDuration: number; // in seconds
 }
 
 export interface GameResult {
   winner?: string | null;
   finalScores: Record<string, number>;
-  roundResults: RoundResult[];
 }
 
 export class Game {
@@ -60,24 +30,20 @@ export class Game {
   public roomId: string;
   public roomConfig: RoomConfig;
 
-  // Turing Detective specific
-  public currentRound: number = 0;
-  public chatMessages: ChatMessage[] = [];
-  public roundResults: RoundResult[] = [];
-  public currentOpponentType: OpponentType | null = null;
-  public playerGuesses: Map<string, OpponentType> = new Map();
+  // Typing game specific
+  public scores: Map<string, number> = new Map();
+  public problemIndex: Map<string, number> = new Map();
 
-  // Kept for compatibility
+  // Kept for gateway compatibility with buildStateData
+  public history: unknown[] = [];
   public result?: GameResult;
   public ready: Map<string, boolean> = new Map();
   public playerUserIds: Map<string, string> = new Map();
   public startTime: number = Date.now();
-  public history: RoundResult[] = [];
 
   private emitCallback?: (event: string, data: any) => void;
   private onRoomEmpty?: (roomId: string) => void;
   private cleanupTimer?: NodeJS.Timeout;
-  private roundTimer?: NodeJS.Timeout;
 
   constructor(
     roomId: string,
@@ -110,7 +76,6 @@ export class Game {
   }
   cleanup() {
     this.cancelCleanupTimer();
-    this.cancelRoundTimer();
   }
 
   // Join/leave
@@ -123,7 +88,7 @@ export class Game {
     if (this.players.size === 0) this.startCleanupTimer();
   }
 
-  // Ready system
+  // Ready system (kept from RPS for flow reuse)
   setReady(playerId: string, isReady: boolean) {
     this.ready.set(playerId, isReady);
   }
@@ -139,73 +104,11 @@ export class Game {
     this.ready.clear();
   }
 
-  // Turing Detective game logic
-  startNewRound() {
-    this.currentRound++;
-    this.chatMessages = [];
-    this.playerGuesses.clear();
-    this.currentOpponentType =
-      Math.random() < 0.5 ? OpponentType.HUMAN : OpponentType.AI;
-    this.resetAllReady();
-  }
-
-  addChatMessage(sender: string, message: string, isAI = false) {
-    this.chatMessages.push({
-      sender,
-      message,
-      timestamp: Date.now(),
-      isAI,
-    });
-  }
-
-  submitGuess(playerId: string, guess: OpponentType) {
-    this.playerGuesses.set(playerId, guess);
-  }
-
-  calculateRoundScores() {
-    const players = Array.from(this.players.values());
-    if (players.length !== 2) return;
-
-    const [player1, player2] = players;
-    const guess1 = this.playerGuesses.get(player1.id);
-    const guess2 = this.playerGuesses.get(player2.id);
-
-    const correct1 = guess1 === this.currentOpponentType;
-    const correct2 = guess2 === this.currentOpponentType;
-
-    const roundScore = 100;
-
-    if (correct1) player1.score += roundScore;
-    if (correct2) player2.score += roundScore;
-
-    const result: RoundResult = {
-      roundNumber: this.currentRound,
-      opponentType: this.currentOpponentType!,
-      player1Guess: guess1 || null,
-      player2Guess: guess2 || null,
-      player1Correct: correct1,
-      player2Correct: correct2,
-      player1Score: player1.score,
-      player2Score: player2.score,
-    };
-
-    this.roundResults.push(result);
-    this.history = this.roundResults;
-    return result;
-  }
-
-  isGameFinished(): boolean {
-    return this.currentRound >= this.roomConfig.totalRounds;
-  }
-
-  getWinner(): string | null {
-    const players = Array.from(this.players.values());
-    if (players.length !== 2) return null;
-
-    const [player1, player2] = players;
-    if (player1.score > player2.score) return player1.id;
-    if (player2.score > player1.score) return player2.id;
-    return null; // Draw
+  // Typing: score operations for future use
+  addScore(playerId: string, points: number) {
+    const current = this.scores.get(playerId) ?? 0;
+    this.scores.set(playerId, current + points);
+    this.emitFullGameState();
   }
 
   // State handling
@@ -222,17 +125,13 @@ export class Game {
   private emitFullGameState() {
     const stateData = {
       state: this.getCurrentState(),
-      players: Array.from(this.players.values()).map((p) => ({
-        id: p.id,
-        nickname: p.nickname,
-        score: p.score,
-      })),
+      players: Array.from(this.players.keys()),
       playerCount: this.players.size,
-      currentRound: this.currentRound,
-      totalRounds: this.roomConfig.totalRounds,
-      chatMessages: this.chatMessages,
-      roundResults: this.roundResults,
+      history: this.history,
       ready: Object.fromEntries(this.ready.entries()),
+      // Provide both scores (new) and hp/moves for compat with existing gateway
+      scores: Object.fromEntries(this.scores.entries()),
+      problemIndex: Object.fromEntries(this.problemIndex.entries()),
       roomInfo: {
         id: this.roomId,
         name: this.roomConfig.name,
@@ -258,16 +157,6 @@ export class Game {
       if (this.players.size === 0) this.onRoomEmpty?.(this.roomId);
     }, 5000);
   }
-  private cancelRoundTimer() {
-    if (this.roundTimer) {
-      clearTimeout(this.roundTimer);
-      this.roundTimer = undefined;
-    }
-  }
-  setRoundTimer(callback: () => void, duration: number) {
-    this.cancelRoundTimer();
-    this.roundTimer = setTimeout(callback, duration);
-  }
 }
 
 export class WaitingState extends GameState {
@@ -275,17 +164,16 @@ export class WaitingState extends GameState {
     game.resetAllReady();
   }
   handleJoin(playerId: string, game: Game): void {
-    game.players.set(playerId, {
-      id: playerId,
-      socketId: playerId,
-      nickname: '',
-      score: 0,
-      guesses: [],
-    });
+    game.players.set(playerId, { id: playerId, socketId: playerId });
+    if (!game.scores.has(playerId)) game.scores.set(playerId, 0);
+    if (!game.problemIndex.has(playerId)) game.problemIndex.set(playerId, 0);
   }
+  handleMove(): void {}
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
     game.clearReady(playerId);
+    game.scores.delete(playerId);
+    game.problemIndex.delete(playerId);
   }
 }
 
@@ -293,20 +181,21 @@ export class StartingState extends GameState {
   private timerId: NodeJS.Timeout | null = null;
   onEnter(game: Game): void {
     game.resetAllReady();
-    game.startNewRound();
     let countdown = 3;
     const tick = () => {
       game.emit('countDown', countdown);
       countdown--;
       if (countdown >= 0) this.timerId = setTimeout(tick, 1000);
-      else game.setState(new ChattingState());
+      else game.setState(new PlayingState());
     };
     tick();
   }
   handleJoin(): void {}
+  handleMove(): void {}
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
     game.clearReady(playerId);
+    game.scores.delete(playerId);
   }
   onExit = () => {
     if (this.timerId) {
@@ -316,175 +205,170 @@ export class StartingState extends GameState {
   };
 }
 
-export class ChattingState extends GameState {
+export class PlayingState extends GameState {
+  private playersReadyForMatch = new Set<string>();
+  private gameStarted = false;
+  private tickInterval?: NodeJS.Timeout;
+  private readonly ROUND_TIME = 60000; // 60s typing battle
+  private readonly TICK = 100; // 100ms updates
+  private startTime = 0;
+
   onEnter(game: Game): void {
-    console.log(`[ChattingState] Round ${game.currentRound} started`);
-
-    game.emit('roundStarted', {
-      roundNumber: game.currentRound,
-      chatDuration: game.roomConfig.chatDuration,
-    });
-
-    // Start chat timer
-    game.setRoundTimer(() => {
-      game.setState(new VotingState());
-    }, game.roomConfig.chatDuration * 1000);
+    this.playersReadyForMatch.clear();
+    // Wait for both clients to signal they're ready to start
+    // Reference param to satisfy lint
+    void game;
   }
 
-  handleJoin(): void {}
-  handleDisconnect(playerId: string, game: Game): void {
-    game.players.delete(playerId);
-    if (game.players.size < 2) {
-      game.setState(new WaitingState());
+  // Called from gateway on 'playerReadyForMatch'
+  handlePlayerReady(playerId: string, game: Game): void {
+    if (this.gameStarted) return;
+    this.playersReadyForMatch.add(playerId);
+    if (
+      this.playersReadyForMatch.size === game.players.size &&
+      game.players.size === 2
+    ) {
+      this.startGame(game);
     }
   }
-}
 
-export class VotingState extends GameState {
-  onEnter(game: Game): void {
-    console.log(`[VotingState] Voting phase for round ${game.currentRound}`);
+  private startGame(game: Game) {
+    this.gameStarted = true;
+    this.startTime = Date.now();
+    game.startTime = this.startTime;
+    game.emit('timerStart', { duration: this.ROUND_TIME });
+    game.emit('matchStart', {});
 
-    game.emit('votingStarted', {
-      roundNumber: game.currentRound,
-      votingDuration: game.roomConfig.votingDuration,
-    });
-
-    // Start voting timer
-    game.setRoundTimer(() => {
-      game.setState(new RevealingState());
-    }, game.roomConfig.votingDuration * 1000);
-  }
-
-  handleJoin(): void {}
-  handleDisconnect(playerId: string, game: Game): void {
-    game.players.delete(playerId);
-    if (game.players.size < 2) {
-      game.setState(new WaitingState());
-    }
-  }
-}
-
-export class RevealingState extends GameState {
-  onEnter(game: Game): void {
-    console.log(
-      `[RevealingState] Revealing results for round ${game.currentRound}`,
-    );
-
-    const result = game.calculateRoundScores();
-
-    game.emit('roundResult', result);
-
-    // Wait 5 seconds before moving to next round or finishing
-    game.setRoundTimer(() => {
-      if (game.isGameFinished()) {
+    this.tickInterval = setInterval(() => {
+      const elapsed = Date.now() - this.startTime;
+      const remaining = Math.max(this.ROUND_TIME - elapsed, 0);
+      game.emit('timerTick', { remaining });
+      if (remaining <= 0) {
+        if (this.tickInterval) clearInterval(this.tickInterval);
+        this.tickInterval = undefined;
         game.setState(new FinishedState());
-      } else {
-        game.startNewRound();
-        game.setState(new ChattingState());
       }
-    }, 5000);
+    }, this.TICK);
   }
 
   handleJoin(): void {}
+  handleMove(): void {}
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
+    // If someone leaves mid-match, end and evaluate winner
     if (game.players.size < 2) {
-      game.setState(new WaitingState());
+      if (this.tickInterval) clearInterval(this.tickInterval);
+      this.tickInterval = undefined;
+      game.setState(new FinishedState());
     }
   }
 }
 
 export class FinishedState extends GameState {
   async onEnter(game: Game) {
-    console.log(`[FinishedState] Game ${game.roomId} finished`);
+    // Decide winner by higher score; tie allowed
+    const [p1, p2] = Array.from(game.players.keys());
+    const s1 = p1 ? (game.scores.get(p1) ?? 0) : 0;
+    const s2 = p2 ? (game.scores.get(p2) ?? 0) : 0;
 
-    const winner = game.getWinner();
-    const players = Array.from(game.players.values());
-
-    // Build final scores
-    const finalScores: Record<string, number> = {};
-    players.forEach((p) => {
-      finalScores[p.id] = p.score;
-    });
+    let winner: string | null = null;
+    if (p1 && p2) {
+      winner = s1 === s2 ? null : s1 > s2 ? p1 : p2;
+    } else if (p1) {
+      winner = p1;
+    } else if (p2) {
+      winner = p2;
+    }
 
     game.result = {
       winner,
-      finalScores,
-      roundResults: game.roundResults,
+      finalScores: Object.fromEntries(game.scores.entries()),
     };
 
-    // Save game results
+    // Persist results and XP similar to RPS
     try {
       const gamesApiService = game.getGamesApiService();
-      const tdGame = await gamesApiService.findByName('Turing Detective');
-      const gameId = tdGame.id;
+      const usersService = game.getUsersService();
+      const duration = Math.floor((Date.now() - game.startTime) / 1000);
 
-      for (const player of players) {
-        const userId = game.playerUserIds.get(player.id);
-        if (!userId) continue;
+      // Resolve gameId by name to avoid hardcoding
+      const cwGame = await gamesApiService.findByName('Code War');
+      const gameId = cwGame.id;
 
-        const state =
-          player.id === winner ? 'won' : winner === null ? 'draw' : 'lost';
+      const userId1 = p1 ? game.playerUserIds.get(p1) : undefined;
+      const userId2 = p2 ? game.playerUserIds.get(p2) : undefined;
 
+      if (p1 && userId1) {
+        const state1 = winner === p1 ? 'won' : winner === null ? 'draw' : 'lost';
+        const score1 = Math.round(s1);
         await gamesApiService.saveGameResult(
           {
             gameId,
-            duration:
-              game.roomConfig.chatDuration * game.roomConfig.totalRounds,
-            state: state as any,
-            score: player.score,
+            duration,
+            state: state1 as any,
+            score: score1,
             totalDamage: 0,
           },
-          userId,
+          userId1,
         );
-
-        // Add XP based on correct guesses
-        const correctGuesses = game.roundResults.filter((round, idx) => {
-          const playerGuess = player.guesses[idx];
-          return playerGuess === round.opponentType;
-        }).length;
-
-        const accuracy = correctGuesses / game.roomConfig.totalRounds;
-        const xp = this.calculateXpFromAccuracy(accuracy, state === 'won');
-
-        const usersService = game.getUsersService();
-        await usersService.addExperience(userId, xp);
+        const xp1 = this.calculateXpFromScore(score1, state1 === 'won');
+        await usersService.addExperience(userId1, xp1);
+      }
+      if (p2 && userId2) {
+        const state2 = winner === p2 ? 'won' : winner === null ? 'draw' : 'lost';
+        const score2 = Math.round(s2);
+        await gamesApiService.saveGameResult(
+          {
+            gameId,
+            duration,
+            state: state2 as any,
+            score: score2,
+            totalDamage: 0,
+          },
+          userId2,
+        );
+        const xp2 = this.calculateXpFromScore(score2, state2 === 'won');
+        await usersService.addExperience(userId2, xp2);
       }
     } catch (err) {
-      console.error('Error saving Turing Detective result:', err);
+      // log and continue
+      // eslint-disable-next-line no-console
+      console.error('Error saving Coding War result:', err);
     }
 
-    game.emit('gameFinished', {
+    game.emit('gameOver', {
       winner,
-      finalScores,
-      roundResults: game.roundResults,
+      finalScores: Object.fromEntries(game.scores.entries()),
     });
 
-    // Reset for next game
+    // After a short delay, reset room so players can replay without recreating the room
     setTimeout(() => {
-      // Reset scores
-      game.players.forEach((p) => {
-        p.score = 0;
-        p.guesses = [];
-      });
-      game.currentRound = 0;
-      game.roundResults = [];
-      game.chatMessages = [];
+      // Reset scores and per-player progression for a fresh start
+      game.scores.clear();
+      for (const id of game.players.keys()) {
+        game.scores.set(id, 0);
+      }
+      game.problemIndex.clear();
+      for (const id of game.players.keys()) {
+        game.problemIndex.set(id, 0);
+      }
+      // Keep last result on the object for any UI that wants to show it on the room screen
+      // Transition back to Waiting so joinRoom and ready flow work again
       game.setState(new WaitingState());
     }, 1500);
   }
-
-  private calculateXpFromAccuracy(accuracy: number, won: boolean): number {
+  private calculateXpFromScore(score: number, won: boolean): number {
     const baseXp = 10;
-    const accuracyXp = Math.floor(accuracy * 50); // Up to 50 XP for 100% accuracy
+    const performanceXp = Math.max(0, Math.floor(score / 2));
     const winBonus = won ? 20 : 0;
     const completionBonus = 5;
-    const total = baseXp + accuracyXp + winBonus + completionBonus;
+    const total = baseXp + performanceXp + winBonus + completionBonus;
     return Math.max(10, Math.min(85, total));
   }
-
   handleJoin(): void {}
+  handleMove(): void {}
   handleDisconnect(playerId: string, game: Game): void {
     game.players.delete(playerId);
+    game.scores.delete(playerId);
   }
 }

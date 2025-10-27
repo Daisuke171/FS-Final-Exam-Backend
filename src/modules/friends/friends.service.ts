@@ -8,7 +8,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ObservableService } from '@common/observable.service';
 import { randomBytes, createHash } from 'crypto';
 import { addHours, isBefore } from 'date-fns';
-import type { Friend as PrismaFriend } from '@prisma/client';
+import type { Friend as PrismaFriend, Prisma } from '@prisma/client';
 import {
   RequestFriendByUsernameInput,
   CreateFriendInviteInput,
@@ -17,6 +17,20 @@ import {
   FriendStatus,
   ToggleFriendActiveInput,
 } from './dto';
+
+type FriendListItem = Prisma.FriendGetPayload<{
+  select: {
+    id: true;
+    status: true;
+    active: true;
+    requesterId: true;
+    receiverId: true;
+    createdAt: true;
+    updatedAt: true;
+    requester: { select: { id: true; nickname: true } };
+    receiver: { select: { id: true; nickname: true } };
+  };
+}>;
 
 @Injectable()
 export class FriendsService {
@@ -29,12 +43,100 @@ export class FriendsService {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  async listForUser(userId: string): Promise<PrismaFriend[]> {
-    return this.prisma.friend.findMany({
+  async listForUser(userId: string) {
+    const rows = await this.prisma.friend.findMany({
       where: { OR: [{ requesterId: userId }, { receiverId: userId }] },
+      select: {
+        id: true,
+        status: true,
+        active: true,
+        requesterId: true,
+        receiverId: true,
+        createdAt: true,
+        updatedAt: true,
+        requester: {
+          select: {
+            id: true,
+            nickname: true,
+            skins: {
+              where: { active: true },
+              take: 1,
+              select: {
+                skin: { select: { id: true, name: true, img: true, level: true, value: true } },
+              },
+            },
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            nickname: true,
+            skins: {
+              where: { active: true },
+              take: 1,
+              select: {
+                skin: { select: { id: true, name: true, img: true, level: true, value: true } },
+              },
+            },
+          },
+        },
+        chats: {
+          select: { id: true }
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
+    return rows.map(r => ({
+      ...r,
+      requester: r.requester
+        ? {
+          id: r.requester.id,
+          nickname: r.requester.nickname,
+          activeSkin: r.requester.skins?.[0]?.skin ?? null,
+        }
+        : null,
+      receiver: r.receiver
+        ? {
+          id: r.receiver.id,
+          nickname: r.receiver.nickname,
+          activeSkin: r.receiver.skins?.[0]?.skin ?? null,
+        }
+        : null,
+    }));
   }
+
+  async listPeersForUser(userId: string) {
+    const rows = await this.listForUser(userId);
+    return rows.map(r => {
+      const isRequester = r.requesterId === userId;
+      const peer = isRequester ? r.receiver : r.requester;
+      return {
+        id: r.id,
+        status: r.status,
+        active: r.active,
+        chatId: r.chats?.[0]?.id,
+        peer, // { id, nickname, activeSkin? }
+      };
+    });
+  }
+
+  async getFriendIds(userId: string): Promise<string[]> {
+    const rows = await this.prisma.friend.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [{ requesterId: userId }, { receiverId: userId }],
+      },
+      select: { requesterId: true, receiverId: true },
+    });
+
+    const out = new Set<string>();
+    for (const r of rows) {
+      const peer = r.requesterId === userId ? r.receiverId : r.requesterId;
+      out.add(peer);
+    }
+    return [...out];
+  }
+
 
   // --- solicitud por username
   async requestByUsername(

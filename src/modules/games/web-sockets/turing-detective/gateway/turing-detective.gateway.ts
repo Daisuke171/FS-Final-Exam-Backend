@@ -9,20 +9,24 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { TDService } from '../turing-detective.service';
-import { Game, StartingState } from '../states/turing-detective.states';
+import {
+  Game,
+  StartingState,
+  PlayingState,
+} from '../states/turing-detective.states';
 import { GamesService } from 'src/modules/games/games.service';
 import { UserService } from '@modules/user/user.service';
 import { JwtService } from '@nestjs/jwt';
 
 interface StateProps {
   state: string;
-  players: Array<{ id: string; nickname?: string; score?: number }>;
+  players: string[];
   playerCount: number;
-  currentRound?: number;
-  totalRounds?: number;
-  chatMessages?: Array<{ sender: string; message: string; timestamp: number; isAI?: boolean }>;
-  roundResults?: unknown;
+  result?: unknown;
+  history?: unknown;
   ready: Record<string, boolean>;
+  scores?: Record<string, number>;
+  problemIndex?: Record<string, number>;
   roomInfo: {
     id: string;
     name: string;
@@ -30,7 +34,6 @@ interface StateProps {
     currentPlayers: number;
     isPrivate: boolean;
   };
-  result?: unknown;
 }
 
 @WebSocketGateway({
@@ -144,7 +147,52 @@ export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.playerInfo.delete(client.id);
   }
 
-  // playerReadyForMatch removed — not applicable for Turing Detective
+  @SubscribeMessage('playerReadyForMatch')
+  handlePlayerReadyForMatch(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+
+      if (!game) {
+        console.error(
+          `[playerReadyForMatch] Juego no encontrado: ${data.roomId}`,
+        );
+        client.emit('error', { message: 'Juego no encontrado' });
+        return;
+      }
+
+      if (!game.players.has(client.id)) {
+        console.error(
+          `[playerReadyForMatch] Jugador ${client.id} no está en el juego`,
+        );
+        client.emit('error', { message: 'No estás en este juego' });
+        return;
+      }
+
+      const currentState = game.getCurrentState();
+      console.log(`[playerReadyForMatch] Estado actual: ${currentState}`);
+
+      if (currentState !== 'PlayingState') {
+        console.warn(
+          `[playerReadyForMatch] Estado incorrecto: ${currentState}`,
+        );
+        return;
+      }
+
+      const playingState = game['state'] as PlayingState;
+      if (
+        playingState &&
+        typeof playingState.handlePlayerReady === 'function'
+      ) {
+        playingState.handlePlayerReady(client.id, game);
+      }
+    } catch (error) {
+      console.error('[playerReadyForMatch] Error:', error);
+      client.emit('error', { message: 'Error al procesar ready' });
+    }
+  }
 
   @SubscribeMessage('confirmReady')
   handleConfirmReady(
@@ -177,14 +225,10 @@ export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const roomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    // Build a complete RoomConfig with sensible defaults for Turing Detective
     const roomConfig = {
       name: data.roomName,
       isPrivate: data.isPrivate,
       password: data.password,
-      totalRounds: 5,
-      chatDuration: 60,
-      votingDuration: 15,
     };
 
     const game = this.gameService.createGame(
@@ -331,22 +375,87 @@ export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('gameState', stateData);
   }
 
-  // Typing-related events removed — Turing Detective uses chat and voting
+  // === Real-time typing sync ===
+  @SubscribeMessage('typingProgress')
+  handleTypingProgress(
+    @MessageBody() data: { roomId: string; lineIndex: number; input: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      // Broadcast to others in the room
+      client.to(data.roomId).emit('typingUpdate', {
+        playerId: client.id,
+        lineIndex: data.lineIndex,
+        input: data.input,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  @SubscribeMessage('lineCommit')
+  handleLineCommit(
+    @MessageBody()
+    data: {
+      roomId: string;
+      lineIndex: number;
+      input: string; // final input for the committed line
+      isPerfect?: boolean;
+      score?: number;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      // Update authoritative score if provided
+      if (typeof data.score === 'number' && !Number.isNaN(data.score)) {
+        game.addScore(client.id, data.score);
+      }
+      client.to(data.roomId).emit('lineCommitted', {
+        playerId: client.id,
+        lineIndex: data.lineIndex,
+        input: data.input,
+        isPerfect: data.isPerfect ?? false,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  // Per-player problem progression: client notifies when it finished the last line of current problem
+  @SubscribeMessage('problemCompleted')
+  handleProblemCompleted(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const game = this.gameService.getGame(data.roomId);
+      if (!game || !game.players.has(client.id)) return;
+      const current = game.problemIndex.get(client.id) ?? 0;
+      game.problemIndex.set(client.id, current + 1);
+      // Emit only to that player about their new index; also broadcast gameState so spectators see progression
+      this.server.to(client.id).emit('problemIndexUpdate', {
+        playerId: client.id,
+        problemIndex: current + 1,
+      });
+      this.emitGameState(data.roomId, game);
+    } catch {
+      // ignore
+    }
+  }
 
   private buildStateData(game: Game): StateProps {
     const stateData: StateProps = {
       state: game.getCurrentState(),
-      players: Array.from(game.players.values()).map((p) => ({
-        id: p.id,
-        nickname: p.nickname,
-        score: p.score,
-      })),
+      players: Array.from(game.players.keys()),
       playerCount: game.players.size,
-      currentRound: game.currentRound,
-      totalRounds: game.roomConfig.totalRounds,
-      chatMessages: game.chatMessages,
-      roundResults: game.roundResults,
+      history: game.history,
       ready: Object.fromEntries(game.ready.entries()),
+      scores: Object.fromEntries(game.scores.entries()),
+      problemIndex: Object.fromEntries(game.problemIndex.entries()),
       roomInfo: {
         id: game.roomId,
         name: game.roomConfig.name,
@@ -354,8 +463,10 @@ export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
         currentPlayers: game.players.size,
         isPrivate: game.roomConfig.isPrivate,
       },
-      result: game.result,
     };
+    if (game.result) {
+      stateData.result = game.result;
+    }
     return stateData;
   }
 

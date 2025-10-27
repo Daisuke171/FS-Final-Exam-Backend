@@ -522,7 +522,15 @@ export class FinishedState extends GameState {
       return;
     }
 
-    const gameId = 'e3163526-32ee-423a-9747-80cea7a00dc9';
+    const gameId = process.env.RPS_ID;
+    if (!gameId) {
+      console.error('Error: RPS_ID environment variable is not set.');
+      game.emit('gameOver', {
+        winner: null,
+        error: 'Server misconfiguration: missing gameId',
+      });
+      return;
+    }
     const maxHp = 100;
     let player1Score: number | null = null;
     let player2Score: number | null = null;
