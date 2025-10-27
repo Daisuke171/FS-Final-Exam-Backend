@@ -10,6 +10,7 @@ import { RefreshResponse } from './responses/refresh.response';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
 import { Context } from '@nestjs/graphql';
+import { GoogleAuthInput } from './inputs/google-auth.input';
 
 @Resolver()
 export class AuthResolver {
@@ -25,6 +26,13 @@ export class AuthResolver {
     @Args('registerInput') registerInput: RegisterInput,
   ): Promise<UserGraph> {
     return this.authService.register(registerInput);
+  }
+
+  @Mutation(() => AuthResponse)
+  async googleAuth(
+    @Args('googleAuthInput') googleAuthInput: GoogleAuthInput,
+  ): Promise<AuthResponse> {
+    return this.authService.googleAuth(googleAuthInput);
   }
 
   @Mutation(() => AuthResponse)

@@ -16,6 +16,7 @@ import { AuthResponse } from '../auth/responses/auth.response';
 import { getEnvNumber } from '@common/utils/env.util';
 import { sanitizeAuthResponse } from '@common/utils/sanitize.util';
 import { ConfigService } from '@nestjs/config';
+import { GoogleAuthInput } from './inputs/google-auth.input';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,156 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly configService: ConfigService,
   ) {}
+
+  async googleAuth(googleAuthInput: GoogleAuthInput): Promise<AuthResponse> {
+    const { email, name, googleId } = googleAuthInput;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      let user = await this.prisma.user.findFirst({
+        where: {
+          OR: [{ email: normalizedEmail }, { googleId }],
+        },
+        include: {
+          level: true,
+          skins: {
+            where: {
+              active: true,
+            },
+            include: {
+              skin: true,
+            },
+          },
+        },
+      });
+
+      if (user) {
+        if (!user.googleId) {
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { googleId },
+            include: {
+              level: true,
+              skins: {
+                where: {
+                  active: true,
+                },
+                include: {
+                  skin: true,
+                },
+              },
+            },
+          });
+        }
+
+        console.log('✅ Usuario de Google encontrado:', user.email);
+      } else {
+        console.log('👤 Creando nuevo usuario desde Google...');
+
+        const initialLevel = await this.prisma.level.findFirst({
+          where: { experienceRequired: 0 },
+        });
+
+        if (!initialLevel) {
+          throw new InternalServerErrorException('Initial level not found');
+        }
+
+        const baseUsername = normalizedEmail
+          .split('@')[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '');
+
+        let username = baseUsername;
+        let counter = 1;
+
+        while (await this.prisma.user.findUnique({ where: { username } })) {
+          username = `${baseUsername}${counter}`;
+          counter++;
+        }
+
+        const baseNickname = name
+          .replace(/\s+/g, '_')
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '')
+          .slice(0, 10);
+
+        let nickname = baseNickname || username;
+        counter = 1;
+
+        while (await this.prisma.user.findUnique({ where: { nickname } })) {
+          nickname = `${baseNickname || username}${counter}`;
+          counter++;
+        }
+
+        const nameParts = name.split(' ');
+        const firstName = nameParts[0] || name;
+        const lastName = nameParts.slice(1).join(' ') || 'Google';
+
+        user = await this.prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            username,
+            nickname,
+            name: firstName,
+            lastname: lastName,
+            birthday: new Date('2000-01-01'),
+            googleId,
+            levelId: initialLevel.id,
+          },
+          include: {
+            level: true,
+            skins: {
+              where: {
+                active: true,
+              },
+              include: {
+                skin: true,
+              },
+            },
+          },
+        });
+
+        console.log('✅ Usuario creado desde Google:', user.email);
+      }
+
+      const accessToken = this.jwtService.sign({ sub: user.id });
+      const refreshToken = this.refreshJwtService.sign({ sub: user.id });
+
+      await this.prisma.refreshToken.create({
+        data: {
+          token: refreshToken,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const { password: _password, ...safeUser } = user;
+      void _password;
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          ...safeUser,
+          friends: [],
+          gameHistory: [],
+          gameFavorites: [],
+          notifications: [],
+          chats: [],
+        },
+      };
+    } catch (error) {
+      console.error('❌ Error en googleAuth:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'No se pudo autenticar con Google',
+      );
+    }
+  }
 
   async register(data: RegisterInput) {
     const email = data.email.toLowerCase().trim();
@@ -108,6 +259,13 @@ export class AuthService {
 
       if (!user) {
         console.warn(`Login fallido: no se encontró usuario con ${identifier}`);
+        throw genericError;
+      }
+
+      if (!user.password) {
+        console.warn(
+          `Login fallido: no se encontró contraseña para el usuario ${user.username}`,
+        );
         throw genericError;
       }
 
