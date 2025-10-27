@@ -1,7 +1,12 @@
 import {
-  WebSocketGateway, WebSocketServer, OnGatewayInit,
-  OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage,
-  ConnectedSocket, MessageBody,
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
@@ -9,8 +14,8 @@ import { ObservableService } from '@common/observable.service';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server!: Server;
 
   // map simple de usuario con socket
@@ -33,7 +38,6 @@ export class ChatGateway
 
   handleConnection(client: Socket) {
     console.log('connected', client.id);
-
   }
 
   handleDisconnect(client: Socket) {
@@ -42,7 +46,10 @@ export class ChatGateway
   }
 
   @SubscribeMessage('set_user')
-  setUser(@ConnectedSocket() client: Socket, @MessageBody() user: { id: string; username: string }) {
+  setUser(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() user: { id: string; username: string },
+  ) {
     this.users.set(client.id, user);
   }
 
@@ -60,19 +67,29 @@ export class ChatGateway
   ) {
     const user = this.users.get(client.id);
     if (!user) return client.emit('error', { message: 'set_user first' });
-    const saved = await this.chat.sendMessage({ chatId: body.chatId, senderId: user.id, message: body.message });
+    const saved = await this.chat.sendMessage({
+      chatId: body.chatId,
+      senderId: user.id,
+      message: body.message,
+    });
     // respuesta directa al emisor
     client.emit('sent', saved);
   }
 
   @SubscribeMessage('get_messages')
-  async getMessages(@ConnectedSocket() client: Socket, @MessageBody() data: { chatId: string }) {
+  async getMessages(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { chatId: string },
+  ) {
     const messages = await this.chat.getMessages(data.chatId);
     client.emit('messages', messages);
   }
 
   @SubscribeMessage('read_message')
-  async readMessage(@ConnectedSocket() client: Socket, @MessageBody() data: { chatId: string; messageId: string }) {
+  async readMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { chatId: string; messageId: string },
+  ) {
     const message = await this.chat.markRead(data.chatId, data.messageId);
     this.server.to(`chat-${data.chatId}`).emit('message_read', message);
   }
