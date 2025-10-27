@@ -43,7 +43,8 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private playerRooms: Map<string, string> = new Map();
-  private playerInfo: Map<string, { nickname: string; userId: string }> = new Map();
+  private playerInfo: Map<string, { nickname: string; userId: string }> =
+    new Map();
 
   constructor(
     private gameService: CWService,
@@ -59,7 +60,10 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.handshake.headers?.authorization?.replace('Bearer ', '');
 
       console.log(`[CW Gateway] Cliente conectando: ${client.id}`);
-      console.log(`[CW Gateway] Token presente: ${!!token}, primeros 20 chars:`, token ? token.substring(0, 20) + '...' : 'N/A');
+      console.log(
+        `[CW Gateway] Token presente: ${!!token}, primeros 20 chars:`,
+        token ? token.substring(0, 20) + '...' : 'N/A',
+      );
 
       if (!token) {
         console.warn(`[CW Gateway] Token no proporcionado para ${client.id}`);
@@ -69,18 +73,25 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const payload = await this.jwtService.verifyAsync(token);
-      console.log(`[CW Gateway] Token verificado para ${client.id}, userId:`, payload.sub);
-      
+      console.log(
+        `[CW Gateway] Token verificado para ${client.id}, userId:`,
+        payload.sub,
+      );
+
       const userId = payload.sub;
       if (!userId) {
-        console.warn(`[CW Gateway] No se encontró userId en payload para ${client.id}`);
+        console.warn(
+          `[CW Gateway] No se encontró userId en payload para ${client.id}`,
+        );
         client.disconnect();
         return;
       }
 
       const user = await this.usersService.getMe(userId);
       if (!user) {
-        console.warn(`[CW Gateway] Usuario no encontrado en DB para userId: ${userId}`);
+        console.warn(
+          `[CW Gateway] Usuario no encontrado en DB para userId: ${userId}`,
+        );
         client.disconnect();
         return;
       }
@@ -90,7 +101,9 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId,
       });
 
-      console.log(`[CW Gateway] ✅ Cliente autenticado: ${client.id} (${user.nickname})`);
+      console.log(
+        `[CW Gateway] ✅ Cliente autenticado: ${client.id} (${user.nickname})`,
+      );
       client.emit('authenticated', {
         userId,
         nickname: user.nickname,
@@ -98,7 +111,10 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
     } catch (error) {
       const err = error as any;
-      console.error('[CW Gateway] ❌ Error en autenticación de WebSocket (Coding War):', err.message || error);
+      console.error(
+        '[CW Gateway] ❌ Error en autenticación de WebSocket (Coding War):',
+        err.message || error,
+      );
       if (err.name === 'TokenExpiredError') {
         console.error('[CW Gateway] Token expirado');
       } else if (err.name === 'JsonWebTokenError') {
@@ -162,7 +178,10 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const playingState = game['state'] as PlayingState;
-      if (playingState && typeof playingState.handlePlayerReady === 'function') {
+      if (
+        playingState &&
+        typeof playingState.handlePlayerReady === 'function'
+      ) {
         playingState.handlePlayerReady(client.id, game);
       }
     } catch (error) {
