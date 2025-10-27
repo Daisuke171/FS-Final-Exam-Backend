@@ -5,7 +5,17 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  app.enableCors({
+    origin: [
+      'http://localhost:3000', // Next.js
+      // agrega otros orígenes si hace falta
+    ],
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length'],
+    optionsSuccessStatus: 204, // evita 400 en preflight
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

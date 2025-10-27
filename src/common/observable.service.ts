@@ -1,24 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
 
-type EventType = 'chatMessage' | 'notification' | 'call';
+type EventType = 'chatMessage' | 'chatMessageUpdated' | 'notification' | 'call';
 
-export interface EventPayload {
+export interface EventPayload<T = any> {
   type: EventType;
-  data: any;
+  data: T;
 }
 
 @Injectable()
 export class ObservableService {
-  // Subject de RxJS para manejar eventos
-  private eventSubject: Subject<EventPayload> = new Subject();
+  private subject = new Subject<EventPayload>();
+  public readonly events$: Observable<EventPayload> =
+    this.subject.asObservable();
 
-  // Observable al que se pueden suscribir
-  // El sufijo $ indica que la variable es un Observable o un flujo de datos reactivo.
-  readonly events$: Observable<EventPayload> = this.eventSubject.asObservable();
-
-  // Método para emitir un evento
-  notify(payload: EventPayload): void {
-    this.eventSubject.next(payload);
+  notify(evt: EventPayload) {
+    this.subject.next(evt);
   }
 }

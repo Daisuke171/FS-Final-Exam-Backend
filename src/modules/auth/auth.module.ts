@@ -10,6 +10,10 @@ import { UserModule } from '@modules/user/user.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 
+function required(name: string, value?: string) {
+  if (!value) throw new Error(`[Auth] Missing env: ${name}`);
+  return value;
+}
 @Module({
   imports: [
     UserModule,
@@ -23,7 +27,7 @@ import { StringValue } from 'ms';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
+        secret: required('JWT_SECRET', config.get<string>('JWT_SECRET')),
         signOptions: {
           expiresIn: (config.get<string>('JWT_EXPIRES_IN') ||
             '15m') as StringValue,
