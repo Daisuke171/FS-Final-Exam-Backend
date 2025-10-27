@@ -34,12 +34,17 @@ export class AuthResolver {
 
   @Mutation(() => RefreshResponse)
   async rotateRefreshToken(@Args('RefreshOldToken') oldToken: string) {
+    console.log('🔁 Recibiendo solicitud de rotación de token...');
+    console.log('🧾 Old token:', oldToken);
     const newToken = await this.authService.rotateRefreshToken(oldToken);
+    console.log('✅ Nuevo refresh token emitido:', newToken);
     return { refreshToken: newToken };
   }
 
   @Mutation(() => AuthResponse)
   async refreshAccessToken(@Args('refreshToken') refreshToken: string) {
+    console.log('🔑 Refrescando access token...');
+    console.log('📩 Refresh token recibido:', refreshToken);
     return this.authService.refreshAccessToken(refreshToken);
   }
 

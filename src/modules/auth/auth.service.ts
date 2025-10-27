@@ -159,20 +159,38 @@ export class AuthService {
 
   async validateRefreshToken(token: string): Promise<string> {
     try {
+      console.log('🔍 Validando refresh token...');
+      console.log('🧾 Token recibido:', token.substring(0, 30) + '...');
+
       // Verificar firma del JWT
       const payload = this.refreshJwtService.verify(token);
+      console.log('✅ Payload decodificado:', payload);
 
       // Buscar en DB
       const stored = await this.prisma.refreshToken.findUnique({
         where: { token },
       });
 
-      if (!stored || stored.revoked) {
-        throw new UnauthorizedException('Refresh token inválido o revocado');
+      if (!stored) {
+        console.warn('⚠️ Token no encontrado en DB');
+        throw new UnauthorizedException('Refresh token no encontrado');
       }
 
-      return payload.sub; // userId
-    } catch {
+      if (stored.revoked) {
+        console.warn('⚠️ Token revocado en DB');
+        throw new UnauthorizedException('Refresh token revocado');
+      }
+
+      // Verificar expiración en base de datos también
+      if (stored.expiresAt && stored.expiresAt < new Date()) {
+        console.warn('⚠️ Token expirado en DB');
+        throw new UnauthorizedException('Refresh token expirado');
+      }
+
+      console.log('✅ Refresh token válido para usuario:', payload.sub);
+      return payload.sub;
+    } catch (error) {
+      console.error('❌ Error en validateRefreshToken:', error);
       throw new UnauthorizedException('Refresh token inválido o expirado');
     }
   }
@@ -189,9 +207,10 @@ export class AuthService {
 
     // Crear uno nuevo
     const newToken = this.refreshJwtService.sign({ sub: userId });
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     await this.prisma.refreshToken.create({
-      data: { token: newToken, userId },
+      data: { token: newToken, userId, expiresAt },
     });
 
     return newToken;
