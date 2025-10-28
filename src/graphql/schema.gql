@@ -152,9 +152,12 @@ type GameFavorite {
   game: Game
   gameId: ID!
   id: ID!
+  lastPlayed: String
+  totalGames: Float
   updatedAt: DateTime!
   user: UserGraph
   userId: ID!
+  winRate: Float
 }
 
 type GameHistory {
