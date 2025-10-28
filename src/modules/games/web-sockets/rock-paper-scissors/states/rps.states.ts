@@ -522,11 +522,7 @@ export class FinishedState extends GameState {
       return;
     }
 
-<<<<<<< HEAD
     const gameId = process.env.RPS_ID || 'rps-id-2';
-=======
-    const gameId = process.env.RPS_ID;
->>>>>>> 35dc27b617c59fc851266998ca37a583e65988c1
     const maxHp = 100;
     let player1Score: number | null = null;
     let player2Score: number | null = null;
