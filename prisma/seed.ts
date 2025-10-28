@@ -139,7 +139,7 @@ const gameData: CreateGameInput[] = [
       'El clásico juego de manos donde se elige una de tres formas: piedra, papel o tijeras. ¡Conquista al rival con estrategia y suerte!',
     rules:
       'La piedra rompe las tijeras (Piedra gana). El papel cubre la piedra (Papel gana). Las tijeras cortan el papel (Tijeras ganan). Si ambos eligen la misma forma, es empate.',
-    gameLogo: 'public/games/rock-paper-scissors-logo.svg',
+    gameLogo: '/logos/rps-logo-lp.webp',
     category: 'Clásico / Duelo',
     score: 50,
     duration: '2 min',
@@ -152,9 +152,21 @@ const gameData: CreateGameInput[] = [
       'Una batalla de ingenio y velocidad de codificación. Los jugadores compiten por resolver un desafío de programación en el menor tiempo posible.',
     rules:
       'Los jugadores reciben el mismo problema de programación. El primero en enviar una solución que pase todas las pruebas (tests) gana la ronda. El juego puede ser al mejor de 3 o 5 rondas.',
-    gameLogo: 'public/games/code-war-logo.svg',
+    gameLogo: '/logos/cw-logo-lp.webp',
     category: 'Estrategia / Programación',
-    score: 100,
+    score: 50,
+    duration: '5-10 min',
+    maxPlayers: 2,
+    minPlayers: 2,
+  },
+  {
+    name: 'Turing Detective',
+    description:
+      'Sumérgete en un misterio donde la lógica y la deducción son tus mejores armas. Descubre si tu oponente es un robot o un humano.',
+    rules: '',
+    gameLogo: '/logos/td-logo-lp.jpg',
+    category: 'Lógica / Deducción',
+    score: 50,
     duration: '5-10 min',
     maxPlayers: 2,
     minPlayers: 2,

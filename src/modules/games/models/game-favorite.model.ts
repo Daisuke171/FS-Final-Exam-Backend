@@ -25,4 +25,13 @@ export class GameFavorite {
 
   @Field()
   updatedAt: Date;
+
+  @Field(() => Number, { nullable: true })
+  totalGames?: number;
+
+  @Field(() => Number, { nullable: true })
+  winRate?: number;
+
+  @Field(() => String, { nullable: true })
+  lastPlayed?: string;
 }
