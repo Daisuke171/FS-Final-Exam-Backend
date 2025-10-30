@@ -154,6 +154,21 @@ export class GamesService {
     });
   }
 
+  async getLastGamePlayed(userId: string, gameId: string) {
+    return this.prisma.gameHistory.findFirst({
+      where: {
+        userId,
+        gameId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+  }
+
   // Leaderboard
 
   async getLeaderboard(gameId: string, limit: number = 50) {
@@ -196,6 +211,19 @@ export class GamesService {
                 atomicNumber: true,
               },
             },
+            skins: {
+              where: { active: true },
+              take: 1,
+              select: {
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                  },
+                },
+              },
+            },
           },
         });
         const wins = await this.prisma.gameHistory.count({
@@ -213,6 +241,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
+          skin: user?.skins[0]?.skin,
           level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };
@@ -260,6 +289,19 @@ export class GamesService {
                 atomicNumber: true,
               },
             },
+            skins: {
+              where: { active: true },
+              take: 1,
+              select: {
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                  },
+                },
+              },
+            },
           },
         });
         const wins = await this.prisma.gameHistory.count({
@@ -277,6 +319,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
+          skin: user?.skins[0]?.skin,
           level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };
@@ -408,7 +451,7 @@ export class GamesService {
       await this.prisma.gameFavorite.delete({
         where: { id: existing.id },
       });
-      return { isFavorite: false, message: 'Removed from favorites' };
+      return false;
     } else {
       await this.prisma.gameFavorite.create({
         data: {
@@ -416,7 +459,7 @@ export class GamesService {
           gameId,
         },
       });
-      return { isFavorite: true, message: 'Added to favorites' };
+      return true;
     }
   }
 

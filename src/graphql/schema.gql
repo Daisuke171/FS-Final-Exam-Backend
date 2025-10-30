@@ -15,7 +15,8 @@ input AnswerCallInput {
 
 type AuthResponse {
   accessToken: String!
-  user: User!
+  refreshToken: String!
+  user: UserGraph!
 }
 
 type Call {
@@ -77,22 +78,12 @@ type CreateManyResult {
 }
 
 input CreateSkinInput {
+  category: String!
   img: String!
   level: Int!
   name: String!
   userIds: [String!]
   value: Float!
-}
-
-input CreateUserInput {
-  birthday: String!
-  email: String!
-  lastname: String!
-  levelId: Int!
-  name: String!
-  nickname: String
-  password: String!
-  username: String!
 }
 
 input CreateUserSkinInput {
@@ -162,9 +153,12 @@ type GameFavorite {
   game: Game
   gameId: ID!
   id: ID!
+  lastPlayed: String
+  totalGames: Float
   updatedAt: DateTime!
-  user: User
+  user: UserGraph
   userId: ID!
+  winRate: Float
 }
 
 type GameHistory {
@@ -177,8 +171,14 @@ type GameHistory {
   state: String!
   totalDamage: Int!
   updatedAt: DateTime!
-  user: User
+  user: UserGraph
   userId: ID!
+}
+
+input GoogleAuthInput {
+  email: String!
+  googleId: String!
+  name: String!
 }
 
 type Leaderboard {
@@ -194,6 +194,7 @@ type LeaderboardEntry {
   name: String
   nickname: String!
   rank: Int!
+  skin: Skin
   totalGames: Int!
   totalScore: Int!
   userId: ID!
@@ -209,16 +210,26 @@ type Level {
   id: Int!
   name: String!
   updatedAt: DateTime!
-  users: [User!]
+  users: [UserGraph!]
+}
+
+type LevelUpResponse {
+  leveledUp: Boolean!
+  newLevel: Int!
+  previousLevel: Int!
+  unlockedSkins: [Skin!]!
+  user: UserGraph!
 }
 
 input LoginInput {
-  email: String!
   password: String!
+  usernameOrEmail: String!
 }
 
 type Mutation {
   acceptFriendInvite(input: AcceptFriendInviteInput!): Friend!
+  activateSkin(skinId: ID!): UserSkin!
+  addExperience(experience: Int!): LevelUpResponse!
   answerCall(input: AnswerCallInput!): Call!
   assignSkin(data: CreateUserSkinInput!): UserSkin!
   createFriendInvite(input: CreateFriendInviteInput!): String!
@@ -226,23 +237,27 @@ type Mutation {
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
   createSkin(data: CreateSkinInput!): Skin!
-  createUser(data: CreateUserInput!): User!
   deleteGame(id: ID!): Game!
   deleteLevel(id: Int!): Level!
   deleteSkin(id: ID!): Skin!
-  deleteUser(id: ID!): User!
+  deleteUser(id: ID!): UserGraph!
   endCall(callId: ID!): Call!
+  googleAuth(googleAuthInput: GoogleAuthInput!): AuthResponse!
   login(loginInput: LoginInput!): AuthResponse!
+  logout: Boolean!
   markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
-  register(registerInput: RegisterInput!): User!
+  refreshAccessToken(refreshToken: String!): AuthResponse!
+  register(registerInput: RegisterInput!): UserGraph!
   rejectCall(callId: ID!): Call!
   removeFriend(id: ID!): Boolean!
   requestFriendByUsername(input: RequestFriendByUsernameInput!): Friend!
+  rotateRefreshToken(RefreshOldToken: String!): RefreshResponse!
   saveGameResult(input: SaveGameResultInput!): GameHistory!
   sendMessage(input: SendMessageInput!): ChatMessage!
   startCall(calleeId: ID!, sdpOffer: String!): Call!
-  toggleFavorite(input: ToggleFavoriteInput!): Boolean!
+  toggleFavorite(gameId: ID!): Boolean!
   toggleFriendActive(input: ToggleFriendActiveInput!): Friend!
+  unlockSkins: [Skin!]!
   updateFriendStatus(input: UpdateFriendStatusInput!): Friend!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
 }
@@ -255,17 +270,23 @@ type Query {
   leaderboard(gameId: ID!): Leaderboard!
   level(id: Int!): Level!
   levels: [Level!]!
-  me(userId: ID!): User!
+  me: UserGraph!
   messages(chatId: ID!): [ChatMessage!]!
   myActiveCalls: [Call!]!
   myHistoryFriends(userId: ID!): [Friend!]!
   skin(id: ID!): Skin!
   skins: [Skin!]!
-  userFavorites(userId: ID!): [GameFavorite!]!
-  userGames(gameId: ID, userId: ID!): [GameHistory!]!
+  userFavorites: [GameFavorite!]!
+  userGames(gameId: ID): [GameHistory!]!
   userSkins: [UserSkin!]!
-  userStats(gameId: ID, userId: ID!): UserStats!
-  users: [User!]!
+  userSkinsWithStatus: [SkinWithStatus!]!
+  userStats(gameId: ID): UserStats!
+  userWithLevel: UserGraph!
+  users: [UserGraph!]!
+}
+
+type RefreshResponse {
+  refreshToken: String!
 }
 
 input RegisterInput {
@@ -289,7 +310,6 @@ input SaveGameResultInput {
   score: Int!
   state: String!
   totalDamage: Int!
-  userId: ID!
 }
 
 input SendMessageInput {
@@ -299,13 +319,14 @@ input SendMessageInput {
 }
 
 type Skin {
+  category: String!
   createdAt: DateTime!
   id: ID!
   img: String!
   level: Int!
   name: String!
   updatedAt: DateTime!
-  users: [User]
+  users: [UserGraph]
   value: Float!
 }
 
@@ -317,15 +338,20 @@ type SkinLite {
   value: Float!
 }
 
-type Subscription {
-  callRinging(calleeId: ID!): Call!
-  messageAdded(chatId: ID!): ChatMessage!
-  messageUpdated(chatId: ID!): ChatMessage!
+type SkinWithStatus {
+  category: String!
+  id: ID!
+  img: String!
+  isActive: Boolean!
+  isOwned: Boolean!
+  isUnlocked: Boolean!
+  level: Int!
+  name: String!
+  userSkinId: ID
 }
 
-input ToggleFavoriteInput {
-  gameId: ID!
-  userId: ID!
+type Subscription {
+  callRinging(calleeId: ID!): Call!
 }
 
 input ToggleFriendActiveInput {
@@ -350,7 +376,7 @@ input UpdateGameInput {
   score: Int
 }
 
-type User {
+type UserGraph {
   birthday: DateTime!
   chats: [String!]!
   coins: Float!
@@ -370,19 +396,20 @@ type User {
   nextLevelExperience: Int
   nickname: String
   notifications: [String!]!
-  skins: [String!]
+  skins: [UserSkin!]
   totalScore: Int!
   updatedAt: DateTime!
   username: String!
 }
 
 type UserSkin {
-  acquiredAt: DateTime!
-  equipped: Boolean!
+  active: Boolean!
+  createdAt: DateTime!
   id: ID!
   skin: Skin
   skinId: String!
-  user: User
+  updatedAt: DateTime!
+  user: UserGraph
   userId: String!
 }
 

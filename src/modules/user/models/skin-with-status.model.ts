@@ -15,6 +15,9 @@ export class SkinWithStatus {
   level: number;
 
   @Field()
+  category: string;
+
+  @Field()
   isUnlocked: boolean;
 
   @Field()

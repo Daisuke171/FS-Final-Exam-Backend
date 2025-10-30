@@ -8,8 +8,12 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { CWService } from '../coding-war.service';
-import { Game, StartingState, PlayingState } from '../states/coding-war.states';
+import { TDService } from '../turing-detective.service';
+import {
+  Game,
+  StartingState,
+  PlayingState,
+} from '../states/turing-detective.states';
 import { GamesService } from 'src/modules/games/games.service';
 import { UserService } from '@modules/user/user.service';
 import { JwtService } from '@nestjs/jwt';
@@ -33,12 +37,12 @@ interface StateProps {
 }
 
 @WebSocketGateway({
-  namespace: '/coding-war',
+  namespace: '/turing-detective',
   cors: {
     origin: '*',
   },
 })
-export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -47,7 +51,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
     new Map();
 
   constructor(
-    private gameService: CWService,
+    private gameService: TDService,
     private gameApiService: GamesService,
     private usersService: UserService,
     private jwtService: JwtService,
@@ -59,14 +63,14 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.handshake.auth?.token ||
         client.handshake.headers?.authorization?.replace('Bearer ', '');
 
-      console.log(`[CW Gateway] Cliente conectando: ${client.id}`);
+      console.log(`[TD Gateway] Cliente conectando: ${client.id}`);
       console.log(
-        `[CW Gateway] Token presente: ${!!token}, primeros 20 chars:`,
+        `[TD Gateway] Token presente: ${!!token}, primeros 20 chars:`,
         token ? token.substring(0, 20) + '...' : 'N/A',
       );
 
       if (!token) {
-        console.warn(`[CW Gateway] Token no proporcionado para ${client.id}`);
+        console.warn(`[TD Gateway] Token no proporcionado para ${client.id}`);
         client.emit('error', { message: 'Token no proporcionado' });
         client.disconnect();
         return;
@@ -74,14 +78,14 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const payload = await this.jwtService.verifyAsync(token);
       console.log(
-        `[CW Gateway] Token verificado para ${client.id}, userId:`,
+        `[TD Gateway] Token verificado para ${client.id}, userId:`,
         payload.sub,
       );
 
       const userId = payload.sub;
       if (!userId) {
         console.warn(
-          `[CW Gateway] No se encontró userId en payload para ${client.id}`,
+          `[TD Gateway] No se encontró userId en payload para ${client.id}`,
         );
         client.disconnect();
         return;
@@ -90,7 +94,7 @@ export class CWGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const user = await this.usersService.getMe(userId);
       if (!user) {
         console.warn(
-          `[CW Gateway] Usuario no encontrado en DB para userId: ${userId}`,
+          `[TD Gateway] Usuario no encontrado en DB para userId: ${userId}`,
         );
         client.disconnect();
         return;

@@ -214,6 +214,7 @@ type Mutation {
   unlockSkins: [Skin!]!
   addExperience(experience: Int!): LevelUpResponse!
   register(registerInput: RegisterInput!): UserGraph!
+  googleAuth(googleAuthInput: GoogleAuthInput!): AuthResponse!
   login(loginInput: LoginInput!): AuthResponse!
   rotateRefreshToken(RefreshOldToken: String!): RefreshResponse!
   refreshAccessToken(refreshToken: String!): AuthResponse!
@@ -268,6 +269,12 @@ input RegisterInput {
   name: String!
   lastname: String!
   birthday: String!
+}
+
+input GoogleAuthInput {
+  email: String!
+  name: String!
+  googleId: String!
 }
 
 input LoginInput {

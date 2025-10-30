@@ -5,7 +5,7 @@ export enum FriendStatus {
   PENDING = 'PENDING',
   ACCEPTED = 'ACCEPTED',
   DECLINED = 'DECLINED',
-  BLOCKED  = 'BLOCKED',
+  BLOCKED = 'BLOCKED',
 }
 registerEnumType(FriendStatus, { name: 'FriendStatus' });
 

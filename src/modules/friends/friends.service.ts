@@ -1,38 +1,43 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ObservableService } from '@common/observable.service';
 import { randomBytes, createHash } from 'crypto';
 import { addHours, isBefore } from 'date-fns';
-import type { Friend as PrismaFriend, Prisma } from '@prisma/client';
+import type { Friend as PrismaFriend } from '@prisma/client';
 import {
   RequestFriendByUsernameInput,
   CreateFriendInviteInput,
   AcceptFriendInviteInput,
   UpdateFriendStatusInput,
-  FriendStatus,
   ToggleFriendActiveInput,
 } from './dto';
+import { FriendStatus } from './dto/update-friend.input';
 
-type FriendListItem = Prisma.FriendGetPayload<{
-  select: {
-    id: true;
-    status: true;
-    active: true;
-    requesterId: true;
-    receiverId: true;
-    createdAt: true;
-    updatedAt: true;
-    requester: { select: { id: true; nickname: true } };
-    receiver: { select: { id: true; nickname: true } };
-  };
-}>;
+// type FriendListItem = Prisma.FriendGetPayload<{
+//   select: {
+//     id: true;
+//     status: true;
+//     active: true;
+//     requesterId: true;
+//     receiverId: true;
+//     createdAt: true;
+//     updatedAt: true;
+//     requester: { select: { id: true; nickname: true } };
+//     receiver: { select: { id: true; nickname: true } };
+//   };
+// }>;
 
 @Injectable()
 export class FriendsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bus: ObservableService,
-  ) { }
+  ) {}
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
@@ -57,7 +62,15 @@ export class FriendsService {
               where: { active: true },
               take: 1,
               select: {
-                skin: { select: { id: true, name: true, img: true, level: true, value: true } },
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                    level: true,
+                    value: true,
+                  },
+                },
               },
             },
           },
@@ -70,39 +83,47 @@ export class FriendsService {
               where: { active: true },
               take: 1,
               select: {
-                skin: { select: { id: true, name: true, img: true, level: true, value: true } },
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                    level: true,
+                    value: true,
+                  },
+                },
               },
             },
           },
         },
         chats: {
-          select: { id: true }
+          select: { id: true },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map(r => ({
+    return rows.map((r) => ({
       ...r,
       requester: r.requester
         ? {
-          id: r.requester.id,
-          nickname: r.requester.nickname,
-          activeSkin: r.requester.skins?.[0]?.skin ?? null,
-        }
+            id: r.requester.id,
+            nickname: r.requester.nickname,
+            activeSkin: r.requester.skins?.[0]?.skin ?? null,
+          }
         : null,
       receiver: r.receiver
         ? {
-          id: r.receiver.id,
-          nickname: r.receiver.nickname,
-          activeSkin: r.receiver.skins?.[0]?.skin ?? null,
-        }
+            id: r.receiver.id,
+            nickname: r.receiver.nickname,
+            activeSkin: r.receiver.skins?.[0]?.skin ?? null,
+          }
         : null,
     }));
   }
 
   async listPeersForUser(userId: string) {
     const rows = await this.listForUser(userId);
-    return rows.map(r => {
+    return rows.map((r) => {
       const isRequester = r.requesterId === userId;
       const peer = isRequester ? r.receiver : r.requester;
       return {
@@ -132,12 +153,16 @@ export class FriendsService {
     return [...out];
   }
 
-
   // --- solicitud por username
-  async requestByUsername(input: RequestFriendByUsernameInput): Promise<PrismaFriend> {
-    const receiver = await this.prisma.user.findUnique({ where: { username: input.username } });
+  async requestByUsername(
+    input: RequestFriendByUsernameInput,
+  ): Promise<PrismaFriend> {
+    const receiver = await this.prisma.user.findUnique({
+      where: { username: input.username },
+    });
     if (!receiver) throw new NotFoundException('Username no encontrado');
-    if (receiver.id === input.requesterId) throw new BadRequestException('No podés agregarte a vos mismo');
+    if (receiver.id === input.requesterId)
+      throw new BadRequestException('No podés agregarte a vos mismo');
 
     const existing = await this.prisma.friend.findFirst({
       where: {
@@ -150,23 +175,36 @@ export class FriendsService {
     if (existing) return existing;
 
     const friend = await this.prisma.friend.create({
-      data: { requesterId: input.requesterId, receiverId: receiver.id, status: 'PENDING' },
+      data: {
+        requesterId: input.requesterId,
+        receiverId: receiver.id,
+        status: 'PENDING',
+      },
     });
 
-    this.bus.notify({ type: 'notification', data: { type: 'friend:request', entity: friend.id, userId: receiver.id } });
+    this.bus.notify({
+      type: 'notification',
+      data: { type: 'friend:request', entity: friend.id, userId: receiver.id },
+    });
     return friend;
   }
 
   // --- crear link one-shot
   async createInvite(input: CreateFriendInviteInput): Promise<string> {
-    const inviter = await this.prisma.user.findUnique({ where: { id: input.inviterId } });
+    const inviter = await this.prisma.user.findUnique({
+      where: { id: input.inviterId },
+    });
     if (!inviter) throw new NotFoundException('Inviter no existe');
 
     let targetUserId: string | null = null;
     if (input.targetUsername !== undefined && input.targetUsername !== null) {
-      const target = await this.prisma.user.findUnique({ where: { username: input.targetUsername }, select: { id: true } });
+      const target = await this.prisma.user.findUnique({
+        where: { username: input.targetUsername },
+        select: { id: true },
+      });
       if (!target) throw new NotFoundException('Username objetivo no existe');
-      if (target.id === inviter.id) throw new BadRequestException('No podés invitarte a vos mismo');
+      if (target.id === inviter.id)
+        throw new BadRequestException('No podés invitarte a vos mismo');
       targetUserId = target.id;
     }
 
@@ -189,15 +227,21 @@ export class FriendsService {
 
   // --- aceptar link (consumir)
   async acceptInvite(input: AcceptFriendInviteInput): Promise<PrismaFriend> {
-    const receiver = await this.prisma.user.findUnique({ where: { id: input.receiverId } });
+    const receiver = await this.prisma.user.findUnique({
+      where: { id: input.receiverId },
+    });
     if (!receiver) throw new NotFoundException('Receiver no existe');
 
     const tokenHash = this.hashToken(input.token);
-    const invite = await this.prisma.friendInvite.findUnique({ where: { tokenHash } });
+    const invite = await this.prisma.friendInvite.findUnique({
+      where: { tokenHash },
+    });
     if (!invite) throw new NotFoundException('Invitación inválida');
     if (invite.usedAt) throw new BadRequestException('Invitación ya usada');
-    if (isBefore(invite.expiresAt, new Date())) throw new BadRequestException('Invitación expirada');
-    if (invite.targetUserId && invite.targetUserId !== receiver.id) throw new ForbiddenException('Invitación no destinada a este usuario');
+    if (isBefore(invite.expiresAt, new Date()))
+      throw new BadRequestException('Invitación expirada');
+    if (invite.targetUserId && invite.targetUserId !== receiver.id)
+      throw new ForbiddenException('Invitación no destinada a este usuario');
 
     const existing = await this.prisma.friend.findFirst({
       where: {
@@ -216,7 +260,9 @@ export class FriendsService {
 
       if (existing) {
         // Aseguramos el chat por si la relación ya existía y no tenía chat
-        const existingChat = await tx.chat.findFirst({ where: { friendId: existing.id } });
+        const existingChat = await tx.chat.findFirst({
+          where: { friendId: existing.id },
+        });
         if (!existingChat) {
           await tx.chat.create({
             data: {
@@ -241,12 +287,26 @@ export class FriendsService {
       await tx.chat.create({
         data: {
           userId: invite.inviterId,
-          friendId: $friend.id,     // clave: referencia a la relación
+          friendId: $friend.id, // clave: referencia a la relación
         },
       });
 
-      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: $friend.id, userId: invite.inviterId } });
-      this.bus.notify({ type: 'notification', data: { type: 'friend:accepted', entity: $friend.id, userId: receiver.id } });
+      this.bus.notify({
+        type: 'notification',
+        data: {
+          type: 'friend:accepted',
+          entity: $friend.id,
+          userId: invite.inviterId,
+        },
+      });
+      this.bus.notify({
+        type: 'notification',
+        data: {
+          type: 'friend:accepted',
+          entity: $friend.id,
+          userId: receiver.id,
+        },
+      });
 
       return $friend;
     });
@@ -259,9 +319,15 @@ export class FriendsService {
       data: { status: input.status },
     });
     // Si pasó a ACCEPTED, asegurar chat
-    if (input.status === 'ACCEPTED') {
+    if (input.status === FriendStatus.ACCEPTED) {
+      await this.prisma.friend.update({
+        where: { id: input.id },
+        data: { active: true },
+      });
       await this.prisma.$transaction(async (tx) => {
-        const exists = await tx.chat.findFirst({ where: { friendId: next.id } });
+        const exists = await tx.chat.findFirst({
+          where: { friendId: next.id },
+        });
         if (!exists) {
           await tx.chat.create({
             data: {
@@ -272,7 +338,15 @@ export class FriendsService {
         }
       });
     }
-    this.bus.notify({ type: 'notification', data: { type: 'friend:status', entity: next.id, status: next.status, userId: next.receiverId } });
+    this.bus.notify({
+      type: 'notification',
+      data: {
+        type: 'friend:status',
+        entity: next.id,
+        status: next.status,
+        userId: next.receiverId,
+      },
+    });
     return next;
   }
 
@@ -282,21 +356,35 @@ export class FriendsService {
       where: { id: input.id },
       data: { active: input.active },
     });
-    this.bus.notify({ type: 'notification', data: { type: 'friend:active', entity: next.id, active: next.active, userId: next.receiverId } });
+    this.bus.notify({
+      type: 'notification',
+      data: {
+        type: 'friend:active',
+        entity: next.id,
+        active: next.active,
+        userId: next.receiverId,
+      },
+    });
     return next;
   }
 
   // Eliminar amigo
   async remove(id: string): Promise<boolean> {
     await this.prisma.friend.delete({ where: { id } });
-    // Borramos el chat 
+    // Borramos el chat
     await this.prisma.$transaction(async (tx) => {
       const chat = await tx.chat.findFirst({ where: { friendId: id } });
       if (chat) await tx.chat.delete({ where: { id: chat.id } });
     });
     // Notificamos
-    this.bus.notify({ type: 'notification', data: { type: 'friend:removed', entity: id } });
-    this.bus.notify({ type: 'notification', data: { type: 'chat:removed', entity: id } });
+    this.bus.notify({
+      type: 'notification',
+      data: { type: 'friend:removed', entity: id },
+    });
+    this.bus.notify({
+      type: 'notification',
+      data: { type: 'chat:removed', entity: id },
+    });
     return true;
   }
 }

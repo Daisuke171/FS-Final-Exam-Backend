@@ -21,7 +21,7 @@ export class FriendsResolver {
     return this.friends.listForUser(userId);
   }
 
-   @Query(() => [FriendPeer])
+  @Query(() => [FriendPeer])
   friendPeersOfUser(@Args('userId', { type: () => ID }) userId: string) {
     return this.friends.listPeersForUser(userId);
   }
@@ -39,7 +39,10 @@ export class FriendsResolver {
   }
 
   @Mutation(() => Friend)
-  acceptFriendInvite(@Args('input', { type: () => AcceptFriendInviteInput }) input: AcceptFriendInviteInput) {
+  acceptFriendInvite(
+    @Args('input', { type: () => AcceptFriendInviteInput })
+    input: AcceptFriendInviteInput,
+  ) {
     console.log('acceptFriendInvite input =>', input);
 
     return this.friends.acceptInvite(input);

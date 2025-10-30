@@ -19,6 +19,10 @@ export class CreateSkinInput {
   @IsDefined()
   level: number;
 
+  @Field(() => String)
+  @IsString()
+  category!: string;
+
   @Field(() => Float)
   @Min(0)
   @IsInt()

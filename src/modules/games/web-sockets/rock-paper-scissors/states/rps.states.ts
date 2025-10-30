@@ -522,7 +522,7 @@ export class FinishedState extends GameState {
       return;
     }
 
-    const gameId = 'e3163526-32ee-423a-9747-80cea7a00dc9';
+    const gameId = process.env.RPS_ID || 'rps-id-2';
     const maxHp = 100;
     let player1Score: number | null = null;
     let player2Score: number | null = null;
@@ -698,6 +698,7 @@ export class FinishedState extends GameState {
     const damageDealtPercent = 100 - opponentHpPercent;
 
     if (won) {
+      // GANADOR: puede ganar entre 5 y 50 puntos
       const hpScore = (playerHpPercent / 100) * 30;
       const speedScore = Math.max(0, 15 - rounds);
       const winBonus = 5;
@@ -705,20 +706,27 @@ export class FinishedState extends GameState {
       const totalScore = hpScore + speedScore + winBonus;
       return Math.min(50, Math.round(totalScore));
     } else {
-      const damageScore = (damageDealtPercent / 100) * 25;
+      // PERDEDOR: SIEMPRE pierde puntos (entre -5 y -40)
+      const damageScore = (damageDealtPercent / 100) * 15; // Reducido de 25 a 15
       const resistanceScore = Math.max(0, 10 - Math.floor(rounds / 2));
 
+      // Penalización base por perder
+      const lossPenalty = -20;
+
+      // Si hizo buen daño, pierde menos
       if (damageDealtPercent >= 50) {
-        const totalScore = damageScore + resistanceScore;
-        return Math.round(totalScore);
+        const totalScore = lossPenalty + (damageScore + resistanceScore) * 0.5; // 50% del bono
+        return Math.max(-5, Math.round(totalScore)); // Pierde mínimo 5
       }
 
+      // Si hizo algo de daño
       if (damageDealtPercent > 0) {
-        const totalScore = damageScore + resistanceScore - 5;
-        return Math.max(-5, Math.round(totalScore));
+        const totalScore = lossPenalty + (damageScore + resistanceScore) * 0.3; // 30% del bono
+        return Math.max(-15, Math.round(totalScore)); // Pierde entre 5 y 15
       }
 
-      return Math.max(-40, -20 - rounds * 2);
+      // Si no hizo nada de daño
+      return Math.max(-40, lossPenalty - rounds * 2); // Pierde entre 20 y 40
     }
   }
   private calculateXpFromScore(score: number, won: boolean): number {
