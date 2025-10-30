@@ -32,19 +32,6 @@ import { CallsModule } from './modules/calls/calls.module';
       subscriptions: {
         'graphql-ws': true,
       },
-      cors: {
-        origin: process.env.NODE_ENV !== 'production' 
-          ? [
-              'http://localhost:3000',
-              'http://localhost:3001',
-            ]
-          : [
-              'https://fs-final-exam-frontend.vercel.app',
-              /^https:\/\/.*\.vercel\.app$/,
-              /^https:\/\/fs-final-exam-frontend-.*\.vercel\.app$/,
-            ],
-        credentials: true,
-      },
     }),
     RpsModule,
     GamesModule,
