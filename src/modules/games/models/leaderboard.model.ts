@@ -1,3 +1,4 @@
+import { Skin } from '@modules/skins/models/skins.model';
 import { ObjectType, Field, Int, ID } from '@nestjs/graphql';
 
 @ObjectType()
@@ -13,6 +14,9 @@ export class LeaderboardEntry {
 
   @Field({ nullable: true })
   name?: string;
+
+  @Field(() => Skin, { nullable: true })
+  skin?: Skin;
 
   @Field(() => Int)
   totalScore: number;

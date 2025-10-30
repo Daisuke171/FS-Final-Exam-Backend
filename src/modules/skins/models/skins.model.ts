@@ -15,6 +15,9 @@ export class Skin {
   @Field(() => Int)
   level!: number;
 
+  @Field(() => String)
+  category!: string;
+
   @Field(() => Float)
   value!: number;
 

@@ -211,6 +211,19 @@ export class GamesService {
                 atomicNumber: true,
               },
             },
+            skins: {
+              where: { active: true },
+              take: 1,
+              select: {
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                  },
+                },
+              },
+            },
           },
         });
         const wins = await this.prisma.gameHistory.count({
@@ -228,6 +241,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
+          skin: user?.skins[0]?.skin,
           level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };
@@ -275,6 +289,19 @@ export class GamesService {
                 atomicNumber: true,
               },
             },
+            skins: {
+              where: { active: true },
+              take: 1,
+              select: {
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                  },
+                },
+              },
+            },
           },
         });
         const wins = await this.prisma.gameHistory.count({
@@ -292,6 +319,7 @@ export class GamesService {
           totalScore: stat._sum.score,
           bestScore: stat._max.score,
           wins,
+          skin: user?.skins[0]?.skin,
           level: user?.level.atomicNumber,
           totalGames: stat._count.id,
         };

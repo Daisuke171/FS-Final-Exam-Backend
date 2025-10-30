@@ -5,18 +5,10 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@common/*": [
-        "src/common/*"
-      ],
-      "@graphql/*": [
-        "src/graphql/*"
-      ],
-      "@modules/*": [
-        "src/modules/*"
-      ],
-      "@types/*": [
-        "src/types/*"
-      ]
+      "@common/*": ["src/common/*"],
+      "@graphql/*": ["src/graphql/*"],
+      "@modules/*": ["src/modules/*"],
+      "@types/*": ["src/types/*"]
     },
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -33,28 +25,12 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": false,
     "forceConsistentCasingInFileNames": true,
-    "types": [
-      "node"
-    ],
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ]
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "ts-node": {
-    "require": [
-      "tsconfig-paths/register"
-    ]
+    "require": ["tsconfig-paths/register"]
   },
-  "include": [
-    "src",
-    "prisma",
-    "src/types"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "test",
-    "**/*.spec.ts"
-  ]
+  "include": ["src", "prisma", "src/types"],
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "prisma/seed.ts"]
 }
