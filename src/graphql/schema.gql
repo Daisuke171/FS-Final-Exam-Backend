@@ -78,6 +78,7 @@ type CreateManyResult {
 }
 
 input CreateSkinInput {
+  category: String!
   img: String!
   level: Int!
   name: String!
@@ -317,6 +318,7 @@ input SendMessageInput {
 }
 
 type Skin {
+  category: String!
   createdAt: DateTime!
   id: ID!
   img: String!
@@ -336,6 +338,7 @@ type SkinLite {
 }
 
 type SkinWithStatus {
+  category: String!
   id: ID!
   img: String!
   isActive: Boolean!
