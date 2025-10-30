@@ -250,7 +250,7 @@ const skins: CreateSkinInput[] = [
   },
   {
     name: 'General Avatar 4',
-    img: '/avatars/general/gen-avatar-4.svg',
+    img: '/avatars/general/gen-avatar-4.webp',
     level: 4,
     value: 160.0,
     category: 'General',

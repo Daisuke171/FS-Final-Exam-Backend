@@ -194,6 +194,7 @@ type LeaderboardEntry {
   name: String
   nickname: String!
   rank: Int!
+  skin: Skin
   totalGames: Int!
   totalScore: Int!
   userId: ID!
