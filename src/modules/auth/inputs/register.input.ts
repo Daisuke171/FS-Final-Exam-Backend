@@ -8,6 +8,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { MinAge } from 'src/modules/auth/decorators/min-age.decorator';
 
 @InputType()
 export class RegisterInput {
@@ -58,5 +59,6 @@ export class RegisterInput {
 
   @Field()
   @IsDateString()
+  @MinAge(7, { message: 'Debes tener al menos 7 años para registrarte' })
   birthday: string;
 }

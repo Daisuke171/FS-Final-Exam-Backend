@@ -56,6 +56,12 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private playerInfo: Map<string, PlayerInfo> = new Map();
   private disconnectionTimers: Map<string, NodeJS.Timeout> = new Map();
 
+  private heartbeatIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private heartbeatTimeouts: Map<string, NodeJS.Timeout> = new Map();
+
+  private readonly HEARTBEAT_INTERVAL = 5000;
+  private readonly HEARTBEAT_TIMEOUT = 12000;
+
   constructor(
     private gameService: RpsService,
     private gameApiService: GamesService,
@@ -125,6 +131,8 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         this.playerInfo.delete(existingClientId);
+
+        this.stopHeartbeat(existingClientId);
       }
 
       this.playerInfo.set(client.id, {
@@ -137,6 +145,12 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         nickname: user.nickname,
         socketId: client.id,
       });
+
+      this.startHeartbeat(client);
+
+      client.on('heartbeat-response', () => {
+        this.resetHeartbeatTimeout(client.id);
+      });
     } catch (error) {
       console.error('Error en autenticación de WebSocket:', error);
       client.emit('error', { message: 'Error de autenticación' });
@@ -144,7 +158,61 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  private startHeartbeat(client: Socket) {
+    this.stopHeartbeat(client.id);
+
+    const interval = setInterval(() => {
+      if (client.connected) {
+        client.emit('heartbeat-ping');
+        this.resetHeartbeatTimeout(client.id);
+      } else {
+        this.stopHeartbeat(client.id);
+      }
+    }, this.HEARTBEAT_INTERVAL);
+
+    this.heartbeatIntervals.set(client.id, interval);
+    this.resetHeartbeatTimeout(client.id);
+  }
+
+  private resetHeartbeatTimeout(clientId: string) {
+    const oldTimeout = this.heartbeatTimeouts.get(clientId);
+    if (oldTimeout) {
+      clearTimeout(oldTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      console.log(`💔 Cliente ${clientId} no responde al heartbeat`);
+
+      const client = this.server.sockets.sockets.get(clientId);
+      if (client) {
+        this.handleDisconnect(client);
+        client.disconnect(true);
+      }
+    }, this.HEARTBEAT_TIMEOUT);
+
+    this.heartbeatTimeouts.set(clientId, timeout);
+  }
+
+  private stopHeartbeat(clientId: string) {
+    const interval = this.heartbeatIntervals.get(clientId);
+    if (interval) {
+      clearInterval(interval);
+      this.heartbeatIntervals.delete(clientId);
+    }
+
+    const timeout = this.heartbeatTimeouts.get(clientId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.heartbeatTimeouts.delete(clientId);
+    }
+  }
+
+  private resetHeartbeatOnActivity(clientId: string) {
+    this.resetHeartbeatTimeout(clientId);
+  }
+
   handleDisconnect(client: Socket) {
+    this.stopHeartbeat(client.id);
     const roomId = this.playerRooms.get(client.id);
     if (!roomId) {
       this.playerInfo.delete(client.id);
@@ -191,6 +259,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         this.playerRooms.delete(client.id);
         this.disconnectionTimers.delete(client.id);
+        this.playerInfo.delete(client.id);
       }, 10000);
 
       this.disconnectionTimers.set(client.id, timer);
@@ -260,6 +329,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    this.resetHeartbeatOnActivity(client.id);
     try {
       const game = this.gameService.getGame(data.roomId);
       const playerInfo = this.getPlayerInfo(client.id);
@@ -309,6 +379,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; ready?: boolean },
     @ConnectedSocket() client: Socket,
   ) {
+    this.resetHeartbeatOnActivity(client.id);
     const roomId = data.roomId;
     const game = this.gameService.getGame(roomId);
     const playerInfo = this.getPlayerInfo(client.id);
@@ -337,6 +408,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { roomName: string; isPrivate: boolean; password?: string },
     @ConnectedSocket() client: Socket,
   ) {
+    this.resetHeartbeatOnActivity(client.id);
     const roomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const playerInfo = this.getPlayerInfo(client.id);
     const nickname = playerInfo.nickname;
@@ -385,6 +457,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; password?: string },
     @ConnectedSocket() client: Socket,
   ) {
+    this.resetHeartbeatOnActivity(client.id);
     console.log(`Cliente ${client.id} quiere unirse a la sala ${data.roomId}`);
     const playerInfo = this.getPlayerInfo(client.id);
     const nickname = playerInfo.nickname;
@@ -449,6 +522,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    this.resetHeartbeatOnActivity(client.id);
     console.log(`Cliente ${client.id} quiere salir de la sala ${data.roomId}`);
 
     const playerInfo = this.getPlayerInfo(client.id);
@@ -481,6 +555,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; move: Moves },
     @ConnectedSocket() client: Socket,
   ) {
+    this.resetHeartbeatOnActivity(client.id);
     const game: Game | undefined = this.gameService.getGame(data.roomId);
     const playerInfo = this.getPlayerInfo(client.id);
     const nickname = playerInfo.nickname;
@@ -494,6 +569,7 @@ export class RpsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
   @SubscribeMessage('getPublicRooms')
   handleGetPublicRooms(@ConnectedSocket() client: Socket) {
+    this.resetHeartbeatOnActivity(client.id);
     const publicRooms = this.gameService.getPublicRooms();
     client.emit('publicRoomsList', publicRooms);
   }

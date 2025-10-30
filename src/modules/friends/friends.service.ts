@@ -8,29 +8,29 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ObservableService } from '@common/observable.service';
 import { randomBytes, createHash } from 'crypto';
 import { addHours, isBefore } from 'date-fns';
-import type { Friend as PrismaFriend, Prisma } from '@prisma/client';
+import type { Friend as PrismaFriend } from '@prisma/client';
 import {
   RequestFriendByUsernameInput,
   CreateFriendInviteInput,
   AcceptFriendInviteInput,
   UpdateFriendStatusInput,
-  FriendStatus,
   ToggleFriendActiveInput,
 } from './dto';
+import { FriendStatus } from './dto/update-friend.input';
 
-type FriendListItem = Prisma.FriendGetPayload<{
-  select: {
-    id: true;
-    status: true;
-    active: true;
-    requesterId: true;
-    receiverId: true;
-    createdAt: true;
-    updatedAt: true;
-    requester: { select: { id: true; nickname: true } };
-    receiver: { select: { id: true; nickname: true } };
-  };
-}>;
+// type FriendListItem = Prisma.FriendGetPayload<{
+//   select: {
+//     id: true;
+//     status: true;
+//     active: true;
+//     requesterId: true;
+//     receiverId: true;
+//     createdAt: true;
+//     updatedAt: true;
+//     requester: { select: { id: true; nickname: true } };
+//     receiver: { select: { id: true; nickname: true } };
+//   };
+// }>;
 
 @Injectable()
 export class FriendsService {
@@ -62,7 +62,15 @@ export class FriendsService {
               where: { active: true },
               take: 1,
               select: {
-                skin: { select: { id: true, name: true, img: true, level: true, value: true } },
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                    level: true,
+                    value: true,
+                  },
+                },
               },
             },
           },
@@ -75,39 +83,47 @@ export class FriendsService {
               where: { active: true },
               take: 1,
               select: {
-                skin: { select: { id: true, name: true, img: true, level: true, value: true } },
+                skin: {
+                  select: {
+                    id: true,
+                    name: true,
+                    img: true,
+                    level: true,
+                    value: true,
+                  },
+                },
               },
             },
           },
         },
         chats: {
-          select: { id: true }
+          select: { id: true },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map(r => ({
+    return rows.map((r) => ({
       ...r,
       requester: r.requester
         ? {
-          id: r.requester.id,
-          nickname: r.requester.nickname,
-          activeSkin: r.requester.skins?.[0]?.skin ?? null,
-        }
+            id: r.requester.id,
+            nickname: r.requester.nickname,
+            activeSkin: r.requester.skins?.[0]?.skin ?? null,
+          }
         : null,
       receiver: r.receiver
         ? {
-          id: r.receiver.id,
-          nickname: r.receiver.nickname,
-          activeSkin: r.receiver.skins?.[0]?.skin ?? null,
-        }
+            id: r.receiver.id,
+            nickname: r.receiver.nickname,
+            activeSkin: r.receiver.skins?.[0]?.skin ?? null,
+          }
         : null,
     }));
   }
 
   async listPeersForUser(userId: string) {
     const rows = await this.listForUser(userId);
-    return rows.map(r => {
+    return rows.map((r) => {
       const isRequester = r.requesterId === userId;
       const peer = isRequester ? r.receiver : r.requester;
       return {
@@ -136,7 +152,6 @@ export class FriendsService {
     }
     return [...out];
   }
-
 
   // --- solicitud por username
   async requestByUsername(
@@ -304,7 +319,11 @@ export class FriendsService {
       data: { status: input.status },
     });
     // Si pasó a ACCEPTED, asegurar chat
-    if (input.status === 'ACCEPTED') {
+    if (input.status === FriendStatus.ACCEPTED) {
+      await this.prisma.friend.update({
+        where: { id: input.id },
+        data: { active: true },
+      });
       await this.prisma.$transaction(async (tx) => {
         const exists = await tx.chat.findFirst({
           where: { friendId: next.id },
