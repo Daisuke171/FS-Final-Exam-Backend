@@ -1,99 +1,311 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# SANYA - Gaming Platform
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A full-stack gaming platform built with Next.js 15 and NestJS, featuring real-time multiplayer games, user authentication, and social features.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🎮 Features
 
-## Description
+- **Multiplayer Games**: Rock Paper Scissors, Coding War, and Turing Detective
+- **Real-time Communication**: Socket.IO integration for live gameplay
+- **User System**: Registration, authentication, profiles, and levels
+- **Social Features**: Friends system, chat, and rankings
+- **Responsive Design**: Mobile-friendly interface with modern UI components
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🛠️ Tech Stack
 
-## Project setup
+### Frontend
+- **Next.js 15** with Turbopack for fast development
+- **TypeScript** for type safety
+- **Apollo Client** for GraphQL communication
+- **Socket.IO Client** for real-time features
+- **NextAuth.js** for authentication
+- **TailwindCSS** for styling
+- **React Hook Form** with Zod validation
 
-```bash
-$ pnpm install
-```
+### Backend
+- **NestJS** with TypeScript
+- **GraphQL** with Apollo Server
+- **Socket.IO** for real-time communication
+- **Prisma ORM** with PostgreSQL
+- **JWT** authentication
+- **File uploads** with Multer
 
-## Compile and run the project
+## 📋 Prerequisites
 
-```bash
-# development
-$ pnpm run start
+Before you begin, ensure you have the following installed:
 
-# watch mode
-$ pnpm run start:dev
+- **Node.js** (v18 or higher)
+- **pnpm** (recommended package manager)
+- **PostgreSQL** (v13 or higher)
+- **Git**
 
-# production mode
-$ pnpm run start:prod
-```
+## 🚀 Installation & Setup
 
-## Run tests
+### 1. Clone the Repository
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+git clone <repository-url>
+cd FS-Final-Exam
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 2. Backend Setup
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+# Navigate to backend directory
+cd FS-Final-Exam-Backend
+
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**Configure your `.env` file:**
+```env
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/fs_final_exam"
 
-## Resources
+# JWT
+JWT_SECRET="your-secure-jwt-secret"
+JWT_REFRESH_SECRET="your-secure-refresh-secret"
 
-Check out a few resources that may come in handy when working with NestJS:
+# Server
+PORT=3011
+NODE_ENV=development
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**Start PostgreSQL and create database:**
+```bash
+# Using Docker (recommended)
+cd DB
+docker-compose up -d
 
-## Support
+# Or manually create database
+createdb fs_final_exam
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+**Set up Prisma and seed data:**
+```bash
+# Generate Prisma client
+npx prisma generate
 
-## Stay in touch
+# Run migrations
+npx prisma migrate dev
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# Seed the database
+pnpm run seed
+```
 
-## License
+**Start the backend server:**
+```bash
+pnpm start:dev
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-# FS-Final-Exam-Backend
+The backend will be available at `http://localhost:3011`
+
+### 3. Frontend Setup
+
+```bash
+# Navigate to frontend directory (from project root)
+cd FS-Final-Exam-Frontend
+
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env
+```
+
+**Configure your `.env` file:**
+```env
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret-here
+
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:3011
+NEXT_PUBLIC_GRAPHQL_URL=http://localhost:3011/graphql
+NEXT_PUBLIC_WS_URL=http://localhost:3011
+```
+
+**Start the frontend development server:**
+```bash
+pnpm dev
+```
+
+The frontend will be available at `http://localhost:3000`
+
+## 🎯 Usage
+
+### Getting Started
+
+1. **Register an Account**: Visit `http://localhost:3000/register` to create a new account
+2. **Login**: Access `http://localhost:3000/login` with your credentials
+3. **Explore Games**: Navigate to the games section to play multiplayer games
+4. **Add Friends**: Use the friends system to connect with other players
+5. **Check Rankings**: View leaderboards and your progress
+
+### Available Games
+
+#### Rock Paper Scissors
+- Classic multiplayer game with real-time matches
+- Create or join rooms
+- Chat with opponents
+- Track wins and losses
+
+#### Coding War
+- Programming challenge battles
+- Real-time code editor
+- Multiple programming problems
+- Live typing progress sharing
+
+#### Turing Detective
+- AI detection game
+- Chat-based gameplay
+- Determine if you're talking to AI or human
+
+### Key Features
+
+- **Profile System**: Customize your avatar and view statistics
+- **Level System**: Progress through 118 element-based levels
+- **Real-time Chat**: Communicate during games
+- **Responsive Design**: Play on desktop or mobile devices
+
+## 🛠️ Development
+
+### Available Scripts
+
+**Frontend:**
+```bash
+pnpm dev          # Start development server with Turbopack
+pnpm build        # Build for production
+pnpm start        # Start production server
+pnpm lint         # Run ESLint
+pnpm storybook    # Start Storybook for component development
+```
+
+**Backend:**
+```bash
+pnpm start:dev    # Start development server with hot reload
+pnpm build        # Build the application
+pnpm start        # Start production server
+pnpm seed         # Seed the database with initial data
+pnpm test         # Run tests
+```
+
+### Project Structure
+
+```
+FS-Final-Exam/
+├── FS-Final-Exam-Frontend/
+│   ├── app/                    # Next.js app directory
+│   ├── components/             # React components
+│   ├── hooks/                  # Custom React hooks
+│   ├── lib/                    # Utilities and configurations
+│   ├── types/                  # TypeScript type definitions
+│   └── public/                 # Static assets
+└── FS-Final-Exam-Backend/
+    ├── src/
+    │   ├── modules/            # Feature modules
+    │   ├── common/             # Shared utilities
+    │   └── types/              # Type definitions
+    └── prisma/                 # Database schema and migrations
+```
+
+## 🔧 Configuration
+
+### Database Configuration
+
+The project uses PostgreSQL with Prisma ORM. The database schema includes:
+
+- **Users**: User accounts with authentication
+- **Games**: Available games and match history
+- **Levels**: Element-based progression system
+- **Skins**: Avatar customization options
+- **Friends**: Social connections between users
+
+### Socket.IO Events
+
+The application uses various Socket.IO events for real-time features:
+
+- **Game Events**: `createRoom`, `joinRoom`, `makeMove`, `gameState`
+- **Chat Events**: `roomChat`, `privateMessage`
+- **Friend Events**: `friendRequest`, `friendAccept`
+
+## 📱 Mobile Support
+
+The application is fully responsive and optimized for mobile devices:
+
+- Touch-friendly game interfaces
+- Mobile-optimized chat system
+- Responsive navigation
+- Optimized performance for mobile browsers
+
+## 🚀 Deployment
+
+### Production Build
+
+**Frontend:**
+```bash
+pnpm build
+pnpm start
+```
+
+**Backend:**
+```bash
+pnpm build
+pnpm start:prod
+```
+
+### Environment Variables for Production
+
+Make sure to set appropriate production environment variables:
+
+- Update `NEXTAUTH_URL` to your production domain
+- Configure production database URL
+- Set secure JWT secrets
+- Update CORS origins for production
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Commit your changes: `git commit -am 'Add new feature'`
+4. Push to the branch: `git push origin feature/new-feature`
+5. Submit a pull request
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Troubleshooting
+
+### Common Issues
+
+**Database Connection Issues:**
+- Ensure PostgreSQL is running
+- Check database credentials in `.env`
+- Verify database exists and is accessible
+
+**Socket Connection Issues:**
+- Check if backend server is running on correct port
+- Verify `NEXT_PUBLIC_WS_URL` in frontend `.env`
+- Check firewall settings
+
+**Build Issues:**
+- Clear `.next` cache: `rm -rf .next`
+- Reinstall dependencies: `rm -rf node_modules && pnpm install`
+- Check for TypeScript errors: `pnpm lint`
+
+### Getting Help
+
+If you encounter issues:
+
+1. Check the console for error messages
+2. Verify all environment variables are set correctly
+3. Ensure all services (database, backend, frontend) are running
+4. Check network connectivity for real-time features
+
+---
+
+**Happy Gaming! 🎮**

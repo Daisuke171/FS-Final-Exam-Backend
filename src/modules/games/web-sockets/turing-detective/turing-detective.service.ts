@@ -25,7 +25,7 @@ export class TDService {
       usersService,
     );
     this.games.set(roomId, game);
-    console.log(`Juego creado en sala: ${roomId}`);
+    console.log(`Turing Detective game created in room: ${roomId}`);
     return game;
   }
 

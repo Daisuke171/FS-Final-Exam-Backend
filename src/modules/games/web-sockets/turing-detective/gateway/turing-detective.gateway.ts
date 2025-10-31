@@ -106,7 +106,7 @@ export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       console.log(
-        `[CW Gateway] ✅ Cliente autenticado: ${client.id} (${user.nickname})`,
+        `[TD Gateway] ✅ Cliente autenticado: ${client.id} (${user.nickname})`,
       );
       client.emit('authenticated', {
         userId,
@@ -116,13 +116,13 @@ export class TDGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       const err = error as any;
       console.error(
-        '[CW Gateway] ❌ Error en autenticación de WebSocket (Coding War):',
+        '[TD Gateway] ❌ Error en autenticación de WebSocket (Turing Detective):',
         err.message || error,
       );
       if (err.name === 'TokenExpiredError') {
-        console.error('[CW Gateway] Token expirado');
+        console.error('[TD Gateway] Token expirado');
       } else if (err.name === 'JsonWebTokenError') {
-        console.error('[CW Gateway] Token inválido');
+        console.error('[TD Gateway] Token inválido');
       }
       client.emit('error', { message: 'Error de autenticación' });
       client.disconnect();
