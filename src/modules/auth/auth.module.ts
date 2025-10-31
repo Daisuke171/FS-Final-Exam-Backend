@@ -30,7 +30,7 @@ function required(name: string, value?: string) {
         secret: required('JWT_SECRET', config.get<string>('JWT_SECRET')),
         signOptions: {
           expiresIn: (config.get<string>('JWT_EXPIRES_IN') ||
-            '15m') as StringValue,
+            '30m') as StringValue,
         },
       }),
     }),

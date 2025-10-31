@@ -29,6 +29,57 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  private async cleanupOldRefreshTokens(userId: string, maxTokens: number = 5) {
+    const activeTokensCount = await this.prisma.refreshToken.count({
+      where: { userId, revoked: false },
+    });
+
+    if (activeTokensCount >= maxTokens) {
+      const tokensToDelete = await this.prisma.refreshToken.findMany({
+        where: { userId, revoked: false },
+        orderBy: { issuedAt: 'asc' },
+        take: activeTokensCount - maxTokens + 1,
+        select: { id: true },
+      });
+
+      await this.prisma.refreshToken.deleteMany({
+        where: {
+          id: {
+            in: tokensToDelete.map((t) => t.id),
+          },
+        },
+      });
+
+      console.log(
+        `🧹 Limpiados ${tokensToDelete.length} tokens antiguos para usuario ${userId}`,
+      );
+    }
+  }
+
+  async cleanupExpiredTokens() {
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+
+    const deleted = await this.prisma.refreshToken.deleteMany({
+      where: {
+        OR: [
+          { expiresAt: { lt: new Date() } }, // Tokens expirados
+          { revoked: true }, // Tokens revocados
+          {
+            usedAt: {
+              not: null,
+              lt: twoMinutesAgo,
+            },
+          }, // Tokens usados hace más de 2 minutos
+        ],
+      },
+    });
+
+    console.log(
+      `🧹 Limpiados ${deleted.count} tokens expirados/revocados/usados`,
+    );
+    return deleted.count;
+  }
+
   async googleAuth(googleAuthInput: GoogleAuthInput): Promise<AuthResponse> {
     const { email, name, googleId } = googleAuthInput;
     const normalizedEmail = email.toLowerCase().trim();
@@ -142,6 +193,19 @@ export class AuthService {
 
       const accessToken = this.jwtService.sign({ sub: user.id });
       const refreshToken = this.refreshJwtService.sign({ sub: user.id });
+
+      const decoded = this.jwtService.decode(accessToken);
+      console.log(
+        '⏰ Access token creado - expira en:',
+        new Date(decoded.exp * 1000),
+      );
+      console.log(
+        '⏱️ Tiempo de vida del access token:',
+        Math.floor((decoded.exp - decoded.iat) / 60),
+        'minutos',
+      );
+
+      await this.cleanupOldRefreshTokens(user.id, 5);
 
       await this.prisma.refreshToken.create({
         data: {
@@ -284,6 +348,19 @@ export class AuthService {
       const accessToken = this.jwtService.sign({ sub: user.id });
       const refreshToken = this.refreshJwtService.sign({ sub: user.id });
 
+      const decoded = this.jwtService.decode(accessToken);
+      console.log(
+        '⏰ Access token creado - expira en:',
+        new Date(decoded.exp * 1000),
+      );
+      console.log(
+        '⏱️ Tiempo de vida del access token:',
+        Math.floor((decoded.exp - decoded.iat) / 60),
+        'minutos',
+      );
+
+      await this.cleanupOldRefreshTokens(user.id, 5);
+
       await this.prisma.refreshToken.create({
         data: {
           token: refreshToken,
@@ -339,6 +416,22 @@ export class AuthService {
         throw new UnauthorizedException('Refresh token revocado');
       }
 
+      if (stored.usedAt) {
+        const timeSinceUsed = Date.now() - stored.usedAt.getTime();
+        const GRACE_PERIOD = 60 * 1000; // 60 segundos
+
+        if (timeSinceUsed > GRACE_PERIOD) {
+          console.warn(
+            `⚠️ Token usado hace ${Math.floor(timeSinceUsed / 1000)}s (fuera del período de gracia)`,
+          );
+          throw new UnauthorizedException('Refresh token ya fue utilizado');
+        }
+
+        console.log(
+          `⏳ Token usado hace ${Math.floor(timeSinceUsed / 1000)}s (dentro del período de gracia - OK)`,
+        );
+      }
+
       // Verificar expiración en base de datos también
       if (stored.expiresAt && stored.expiresAt < new Date()) {
         console.warn('⚠️ Token expirado en DB');
@@ -358,14 +451,16 @@ export class AuthService {
     const userId = await this.validateRefreshToken(oldToken);
 
     // Revoca el token viejo
-    await this.prisma.refreshToken.updateMany({
+    await this.prisma.refreshToken.update({
       where: { token: oldToken },
-      data: { revoked: true },
+      data: { usedAt: new Date() },
     });
 
     // Crear uno nuevo
     const newToken = this.refreshJwtService.sign({ sub: userId });
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.cleanupOldRefreshTokens(userId, 5);
 
     await this.prisma.refreshToken.create({
       data: { token: newToken, userId, expiresAt },
