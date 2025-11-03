@@ -1,11 +1,11 @@
-import { InputType, Field, Int, ID } from '@nestjs/graphql';
-import { IsNotEmpty, Min, IsIn } from 'class-validator';
+import { InputType, Field, Int } from '@nestjs/graphql';
+import { Min, IsIn, IsString } from 'class-validator';
 
 @InputType()
 export class SaveGameResultInput {
-  @Field(() => ID)
-  @IsNotEmpty()
-  gameId: string;
+  @Field()
+  @IsString()
+  gameName: string;
 
   @Field(() => Int)
   @Min(0)
