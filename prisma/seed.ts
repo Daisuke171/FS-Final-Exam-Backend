@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { MissionDifficulty, MissionType, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CreateLevelInput } from '@modules/games/web-sockets/rock-paper-scissors/utils/getNextLevel';
 
@@ -1276,6 +1276,133 @@ export const levels: CreateLevelInput[] = [
   },
 ];
 
+const generalMissions = [
+  {
+    title: 'Victoria Perfecta',
+    description: 'Gana sin recibir daño',
+    type: MissionType.GENERAL,
+    difficulty: MissionDifficulty.HARD,
+    icon: 'trophy',
+    targetType: 'perfect_win',
+    targetValue: 1,
+    xpReward: 150,
+    coinsReward: 25,
+    order: 1,
+  },
+  {
+    title: 'Racha de Victorias',
+    description: 'Gana 5 partidas seguidas',
+    type: MissionType.GENERAL,
+    difficulty: MissionDifficulty.MEDIUM,
+    icon: 'flame',
+    targetType: 'win_streak',
+    targetValue: 5,
+    xpReward: 100,
+    coinsReward: 20,
+    order: 2,
+  },
+  {
+    title: 'Jugador Dedicado',
+    description: 'Juega 10 partidas',
+    type: MissionType.GENERAL,
+    difficulty: MissionDifficulty.EASY,
+    icon: 'gamepad',
+    targetType: 'game_played',
+    targetValue: 10,
+    xpReward: 50,
+    coinsReward: 10,
+    order: 3,
+  },
+  {
+    title: 'Campeón',
+    description: 'Gana 20 partidas',
+    type: MissionType.GENERAL,
+    difficulty: MissionDifficulty.MEDIUM,
+    icon: 'crown',
+    targetType: 'game_won',
+    targetValue: 20,
+    xpReward: 200,
+    coinsReward: 40,
+    order: 4,
+  },
+  {
+    title: 'Maestro de la Racha',
+    description: 'Consigue una racha de 10 victorias',
+    type: MissionType.GENERAL,
+    difficulty: MissionDifficulty.HARD,
+    icon: 'flash',
+    targetType: 'win_streak',
+    targetValue: 10,
+    xpReward: 250,
+    coinsReward: 50,
+    order: 5,
+  },
+  {
+    title: 'Coleccionista de Puntos',
+    description: 'Acumula 1000 puntos totales',
+    type: MissionType.GENERAL,
+    difficulty: MissionDifficulty.MEDIUM,
+    icon: 'star',
+    targetType: 'total_score',
+    targetValue: 1000,
+    xpReward: 150,
+    coinsReward: 30,
+    order: 6,
+  },
+];
+
+// MISIONES DIARIAS
+const dailyMissions = [
+  {
+    title: 'Práctica Diaria',
+    description: 'Juega 3 partidas hoy',
+    type: MissionType.DAILY,
+    difficulty: MissionDifficulty.EASY,
+    icon: 'calendar',
+    targetType: 'game_played',
+    targetValue: 3,
+    xpReward: 30,
+    coinsReward: 5,
+    order: 1,
+  },
+  {
+    title: 'Victoria del Día',
+    description: 'Gana 2 partidas hoy',
+    type: MissionType.DAILY,
+    difficulty: MissionDifficulty.MEDIUM,
+    icon: 'trophy',
+    targetType: 'game_won',
+    targetValue: 2,
+    xpReward: 50,
+    coinsReward: 10,
+    order: 2,
+  },
+  {
+    title: 'Explorador',
+    description: 'Juega ambos juegos hoy',
+    type: MissionType.DAILY,
+    difficulty: MissionDifficulty.EASY,
+    icon: 'compass',
+    targetType: 'play_both_games',
+    targetValue: 1,
+    xpReward: 40,
+    coinsReward: 8,
+    order: 3,
+  },
+  {
+    title: 'Racha del Día',
+    description: 'Consigue 3 victorias seguidas',
+    type: MissionType.DAILY,
+    difficulty: MissionDifficulty.HARD,
+    icon: 'flame',
+    targetType: 'win_streak',
+    targetValue: 3,
+    xpReward: 75,
+    coinsReward: 15,
+    order: 4,
+  },
+];
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -1340,6 +1467,30 @@ async function main() {
     console.log(`Creado o actualizado Usuario: ${createdUser.username}`);
   }
   console.log(`Seeding de Usuarios terminado.`);
+
+  console.log(`\nIniciando el seeding de Misiones...`);
+
+  const allMissions = [...generalMissions, ...dailyMissions];
+
+  for (const mission of allMissions) {
+    const createdMission = await prisma.mission.upsert({
+      where: {
+        title: mission.title,
+      },
+      update: {
+        ...mission,
+      },
+      create: {
+        ...mission,
+      },
+    });
+    console.log(`Creada o actualizada Misión: ${createdMission.title}`);
+  }
+
+  console.log(`Seeding de Misiones terminado.`);
+  console.log(`✅ Total de misiones: ${allMissions.length}`);
+  console.log(`  - Generales: ${generalMissions.length}`);
+  console.log(`  - Diarias: ${dailyMissions.length}`);
 }
 
 main()
