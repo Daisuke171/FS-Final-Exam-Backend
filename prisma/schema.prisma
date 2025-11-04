@@ -40,6 +40,7 @@ model User {
   refreshTokens         RefreshToken[]
   googleId              String?               @unique
   missions              UserMissionProgress[]
+  achievements          UserAchievement[]
 
   @@map("users")
 }
@@ -354,4 +355,71 @@ enum MissionDifficulty {
   EASY
   MEDIUM
   HARD
+}
+
+model Achievement {
+  id          String              @id @default(uuid())
+  title       String              @unique
+  description String
+  rarity      AchievementRarity   @default(COMMON)
+  category    AchievementCategory @default(GAMEPLAY)
+  icon        String              @default("heroicons:trophy-20-solid")
+
+  targetType  String
+  targetValue Int
+  gameId      String?
+
+  xpReward    Int   @default(0)
+  coinsReward Float @default(0)
+
+  active Boolean @default(true)
+  hidden Boolean @default(false)
+  order  Int     @default(0)
+
+  users UserAchievement[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String @id @default(uuid())
+  userId        String @map("user_id")
+  achievementId String @map("achievement_id")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  currentProgress Int       @default(0)
+  unlockedAt      DateTime? @map("unlocked_at")
+
+  seen Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@index([unlockedAt])
+  @@map("user_achievements")
+}
+
+enum AchievementRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum AchievementCategory {
+  GAMEPLAY
+  SOCIAL
+  PROGRESSION
+  COLLECTION
+  SPECIAL
+  COMPETITIVE
 }
