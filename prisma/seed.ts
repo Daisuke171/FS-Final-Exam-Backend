@@ -1586,7 +1586,7 @@ const achievements = [
 
 const prisma = new PrismaClient();
 
-async function main() {
+async function seed() {
   console.log(`Iniciando el seeding...`);
 
   for (const level of levels) {
@@ -1682,8 +1682,8 @@ async function main() {
   console.log(`  - Generales: ${generalMissions.length}`);
   console.log(`  - Diarias: ${dailyMissions.length}`);
 }
-
-main()
+seed().finally(() => prisma.$disconnect());
+/* main()
   .catch((e) => {
     console.error(e);
     process.exit(1);
@@ -1692,4 +1692,4 @@ main()
     prisma.$disconnect().catch((err) => {
       console.error('Error disconnecting Prisma Client:', err);
     });
-  });
+  }); */

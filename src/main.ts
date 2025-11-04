@@ -2,9 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
   // Configure CORS for both development and production
   const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -44,7 +45,7 @@ async function bootstrap() {
   );
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = process.env.PORT ?? 3011;
+  const port = process.env.PORT ?? 3010;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Server running on port ${port}`);
 }

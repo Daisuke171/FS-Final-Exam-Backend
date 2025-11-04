@@ -1,6 +1,6 @@
 import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
 import { FriendsService } from './friends.service';
-import { Friend } from './models/friend.model';
+import { Friend, FriendEdgeUser } from './models/friend.model';
 import { FriendPeer } from './models/friend-peer-model';
 
 import {
@@ -24,6 +24,11 @@ export class FriendsResolver {
   @Query(() => [FriendPeer])
   friendPeersOfUser(@Args('userId', { type: () => ID }) userId: string) {
     return this.friends.listPeersForUser(userId);
+  }
+
+  @Query(() => FriendEdgeUser)
+  getFriendById(@Args('id', { type: () => ID }) id: string) {
+    return this.friends.getFriendById(id);
   }
 
   // Mutations

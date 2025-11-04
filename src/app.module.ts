@@ -16,7 +16,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CodingWarModule } from '@modules/games/web-sockets/coding-war/coding-war.module';
 import { TuringDetectiveModule } from '@modules/games/web-sockets/turing-detective/turing-detective.module';
 import { join } from 'path';
-import { CallsModule } from './modules/calls/calls.module';
+import { CallModule } from './modules/calls/calls.module';
 import { MissionsModule } from '@modules/missions/missions.module';
 import { AchievementsModule } from '@modules/achievements/achievements.module';
 
@@ -34,6 +34,7 @@ import { AchievementsModule } from '@modules/achievements/achievements.module';
       subscriptions: {
         'graphql-ws': true,
       },
+  //    cors: false,
     }),
     RpsModule,
     GamesModule,
@@ -44,7 +45,7 @@ import { AchievementsModule } from '@modules/achievements/achievements.module';
     UserSkinModule,
     FriendsModule,
     ChatModule,
-    CallsModule,
+    CallModule,
     UploadsModule,
     CommonModule,
     CodingWarModule,

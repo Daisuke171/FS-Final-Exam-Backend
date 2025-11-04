@@ -1,0 +1,72 @@
+[
+  {
+    "atomicNumber": 1,
+    "name": "Hidrógeno",
+    "chemicalSymbol": "H",
+    "color": "#F0F0F0",
+    "experienceRequired": 0
+  },
+  {
+    "atomicNumber": 2,
+    "name": "Helio",
+    "chemicalSymbol": "He",
+    "color": "#D9FFFF",
+    "experienceRequired": 50
+  },
+  {
+    "atomicNumber": 3,
+    "name": "Litio",
+    "chemicalSymbol": "Li",
+    "color": "#CC80FF",
+    "experienceRequired": 150
+  },
+  {
+    "atomicNumber": 4,
+    "name": "Berilio",
+    "chemicalSymbol": "Be",
+    "color": "#C2FF00",
+    "experienceRequired": 300
+  },
+  {
+    "atomicNumber": 5,
+    "name": "Boro",
+    "chemicalSymbol": "B",
+    "color": "#FFB5B5",
+    "experienceRequired": 500
+  },
+  {
+    "atomicNumber": 6,
+    "name": "Carbono",
+    "chemicalSymbol": "C",
+    "color": "#909090",
+    "experienceRequired": 750
+  },
+  {
+    "atomicNumber": 7,
+    "name": "Nitrógeno",
+    "chemicalSymbol": "N",
+    "color": "#3050F8",
+    "experienceRequired": 1050
+  },
+  {
+    "atomicNumber": 8,
+    "name": "Oxígeno",
+    "chemicalSymbol": "O",
+    "color": "#FF0D0D",
+    "experienceRequired": 1400
+  },
+  {
+    "atomicNumber": 9,
+    "name": "Flúor",
+    "chemicalSymbol": "F",
+    "color": "#90E050",
+    "experienceRequired": 1800
+  },
+  {
+    "atomicNumber": 10,
+    "name": "Neón",
+    "chemicalSymbol": "Ne",
+    "color": "#B3E3F5",
+    "experienceRequired": 2250
+  } 
+]

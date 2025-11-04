@@ -1,67 +1,47 @@
-import { Resolver, Query, Mutation, Args, ID, Subscription } from '@nestjs/graphql';
-import { Inject, UseGuards } from '@nestjs/common';
-import { PubSub, PubSubEngine } from 'graphql-subscriptions';
+import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { CallsService } from './calls.service';
 import { Call } from './models/call.model';
-import { StartCallInput } from './dto/start-call.input';
-import { AnswerCallInput } from './dto/answer-call.input';
-import { RejectCallInput } from './dto/reject-call.input';
-import { EndCallInput } from './dto/end-call.input';
-import { IceCandidateInput } from './dto/ice-candidate.input';
 import { GqlAuthGuard } from '@modules/auth/guards/gql-auth.guard';
 import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
 import { UserGraph } from '@modules/user/models/user.model';
 
-
-const pubSub = new PubSub();
 @UseGuards(GqlAuthGuard)
 @Resolver(() => Call)
 export class CallsResolver {
   constructor(
     private readonly calls: CallsService
-  ) {}
+  ) { }
 
-  // 🔸 Queries
+
+
   @Query(() => [Call])
   myActiveCalls(@CurrentUser() user: UserGraph) {
     return this.calls.getActiveCallsByUser(user.id);
   }
 
-  // 🔸 Mutations
-  @Mutation(() => Call)
-  async startCall(@CurrentUser() user: UserGraph, @Args('calleeId', { type: () => ID }) calleeId: string, @Args('sdpOffer') sdpOffer: string) {
-    const call = await this.calls.startCall({ callerId: user.id, calleeId, sdpOffer });
-    await pubSub.publish(`call:ringing:${calleeId}`, { callRinging: call });
-    return call;
-  }
 
   @Mutation(() => Call)
-  async answerCall(@CurrentUser() user: UserGraph, @Args('input') input: AnswerCallInput) {
-    const call = await this.calls.answerCall({ ...input, calleeId: user.id });
-    await pubSub.publish(`call:accepted:${call.id}`, { callAccepted: call });
-    return call;
+  startCall(@CurrentUser() user: UserGraph, @Args('calleeId', { type: () => ID }) calleeId: string, @Args('sdpOffer') sdpOffer: string) {
+    return this.calls.startCall({ callerId: user.id, calleeId, sdpOffer });
   }
+
 
   @Mutation(() => Call)
-  async rejectCall(@CurrentUser() user: UserGraph, @Args('callId', { type: () => ID }) callId: string) {
-    const call = await this.calls.rejectCall({ callId, calleeId: user.id });
-    await pubSub.publish(`call:rejected:${call.id}`, { callRejected: call });
-    return call;
+  answerCall(@CurrentUser() user: UserGraph, @Args('callId', { type: () => ID }) callId: string, @Args('sdpAnswer') sdpAnswer: string) {
+    return this.calls.answerCall({ callId, calleeId: user.id, sdpAnswer });
   }
+
 
   @Mutation(() => Call)
-  async endCall(@CurrentUser() user: UserGraph, @Args('callId', { type: () => ID }) callId: string) {
-    const call = await this.calls.endCall({ callId, userId: user.id });
-    await pubSub.publish(`call:ended:${call.id}`, { callEnded: call });
-    return call;
+  rejectCall(@CurrentUser() user: UserGraph, @Args('callId', { type: () => ID }) callId: string) {
+    return this.calls.rejectCall({ callId, calleeId: user.id });
   }
 
-  // 🔸 Subscriptions
-  @Subscription(() => Call, {
-    filter: (payload, variables) => payload.callRinging.calleeId === variables.calleeId,
-    resolve: (payload) => payload.callRinging,
-  })
-  callRinging(@Args('calleeId', { type: () => ID }) calleeId: string) {
-    return pubSub.asyncIterator(`call:ringing:${calleeId}`);
+
+  @Mutation(() => Call)
+  endCall(@CurrentUser() user: UserGraph, @Args('callId', { type: () => ID }) callId: string) {
+    return this.calls.endCall({ callId, userId: user.id });
   }
+
 }

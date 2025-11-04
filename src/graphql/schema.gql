@@ -59,24 +59,6 @@ type AuthResponse {
   user: UserGraph!
 }
 
-type Call {
-  calleeId: ID!
-  callerId: ID!
-  createdAt: DateTime!
-  id: ID!
-  sdpAnswer: String
-  sdpOffer: String
-  status: CallStatus!
-  updatedAt: DateTime!
-}
-
-enum CallStatus {
-  ACCEPTED
-  ENDED
-  REJECTED
-  RINGING
-}
-
 type ChatMessage {
   chatId: ID!
   id: ID!
@@ -174,7 +156,7 @@ type Friend {
 type FriendEdgeUser {
   activeSkin: SkinLite
   id: ID!
-  nickname: String!
+  nickname: String
 }
 
 type FriendPeer {
@@ -328,7 +310,6 @@ type Mutation {
   acceptFriendInvite(input: AcceptFriendInviteInput!): Friend!
   activateSkin(skinId: ID!): UserSkin!
   addExperience(experience: Int!): LevelUpResponse!
-  answerCall(input: AnswerCallInput!): Call!
   assignSkin(data: CreateUserSkinInput!): UserSkin!
   claimMissionReward(missionId: ID!): ClaimRewardResponse!
   createFriendInvite(input: CreateFriendInviteInput!): String!
@@ -342,7 +323,6 @@ type Mutation {
   deleteMission(id: ID!): Boolean!
   deleteSkin(id: ID!): Skin!
   deleteUser(id: ID!): UserGraph!
-  endCall(callId: ID!): Call!
   googleAuth(googleAuthInput: GoogleAuthInput!): AuthResponse!
   initializeMissions: Boolean!
   login(loginInput: LoginInput!): AuthResponse!
@@ -351,13 +331,11 @@ type Mutation {
   markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
   refreshAccessToken(refreshToken: String!): AuthResponse!
   register(registerInput: RegisterInput!): UserGraph!
-  rejectCall(callId: ID!): Call!
   removeFriend(id: ID!): Boolean!
   requestFriendByUsername(input: RequestFriendByUsernameInput!): Friend!
   rotateRefreshToken(RefreshOldToken: String!): RefreshResponse!
   saveGameResult(input: SaveGameResultInput!): GameHistory!
   sendMessage(input: SendMessageInput!): ChatMessage!
-  startCall(calleeId: ID!, sdpOffer: String!): Call!
   toggleFavorite(gameId: ID!): Boolean!
   toggleFriendActive(input: ToggleFriendActiveInput!): Friend!
   unlockSkins: [Skin!]!
@@ -371,6 +349,7 @@ type Query {
   friendPeersOfUser(userId: ID!): [FriendPeer!]!
   game(id: ID!): Game!
   games: [Game!]!
+  getFriendById(id: ID!): FriendEdgeUser!
   globalLeaderboard: Leaderboard!
   leaderboard(gameId: ID!): Leaderboard!
   level(id: Int!): Level!
@@ -456,10 +435,6 @@ type SkinWithStatus {
   level: Int!
   name: String!
   userSkinId: ID
-}
-
-type Subscription {
-  callRinging(calleeId: ID!): Call!
 }
 
 input ToggleFriendActiveInput {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
 
-type EventType = 'chatMessage' | 'chatMessageUpdated' | 'notification' | 'call';
+type EventType = 'chatMessage' | 'chatMessageUpdated' | 'notification' | 'call' | 'chatMessagesRead';
 
 export interface EventPayload<T = any> {
   type: EventType;

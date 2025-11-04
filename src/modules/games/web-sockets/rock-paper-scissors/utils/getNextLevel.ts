@@ -5,7 +5,7 @@ export interface CreateLevelInput {
   color: string;
   experienceRequired: number;
 }
-import { levels } from 'prisma/seed';
+import levels from './dataLevels.json';
 
 export function getNextLevel(atomicNumber: number) {
   return levels.find((l) => l.atomicNumber === atomicNumber);
