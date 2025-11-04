@@ -18,6 +18,7 @@ import { TuringDetectiveModule } from '@modules/games/web-sockets/turing-detecti
 import { join } from 'path';
 import { CallsModule } from './modules/calls/calls.module';
 import { MissionsModule } from '@modules/missions/missions.module';
+import { AchievementsModule } from '@modules/achievements/achievements.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { MissionsModule } from '@modules/missions/missions.module';
     CodingWarModule,
     TuringDetectiveModule,
     MissionsModule,
+    AchievementsModule,
   ],
   controllers: [],
   providers: [],
