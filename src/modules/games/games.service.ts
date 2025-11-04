@@ -3,10 +3,18 @@ import { PrismaService } from 'prisma/prisma.service';
 import { CreateGameInput } from './inputs/create-game.input';
 import { UpdateGameInput } from './inputs/update-game.input';
 import { SaveGameResultInput } from './inputs/save-game.input';
+import { MissionsService } from '@modules/missions/missions.service';
+import { GameCacheService } from './game-cache.service';
+import { AchievementsService } from '@modules/achievements/achievements.service';
 
 @Injectable()
 export class GamesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly missionsService: MissionsService,
+    private readonly gameCache: GameCacheService,
+    private readonly achievementsService: AchievementsService,
+  ) {}
 
   // CRUD de juegos
 
@@ -35,19 +43,12 @@ export class GamesService {
   }
 
   async createGame(input: CreateGameInput) {
-    return this.prisma.game.create({
-      data: {
-        name: input.name,
-        description: input.description,
-        rules: input.rules,
-        gameLogo: input.gameLogo,
-        category: input.category,
-        score: input.score,
-        duration: input.duration,
-        maxPlayers: input.maxPlayers,
-        minPlayers: input.minPlayers,
-      },
+    const game = await this.prisma.game.create({
+      data: input,
     });
+    await this.gameCache.invalidateCache();
+
+    return game;
   }
 
   async deleteGame(id: string) {
@@ -55,6 +56,8 @@ export class GamesService {
     if (!game) {
       throw new NotFoundException(`Game with ID ${id} not found`);
     }
+    await this.gameCache.invalidateCache();
+
     return this.prisma.game.delete({ where: { id } });
   }
 
@@ -82,11 +85,12 @@ export class GamesService {
   // Historial
 
   async saveGameResult(input: SaveGameResultInput, userId: string) {
+    const gameId = await this.gameCache.getGameIdByName(input.gameName);
     const game = await this.prisma.game.findUnique({
-      where: { id: input.gameId },
+      where: { id: gameId },
     });
     if (!game) {
-      throw new NotFoundException(`Game with ID ${input.gameId} not found`);
+      throw new NotFoundException(`Game with ID ${gameId} not found`);
     }
 
     const user = await this.prisma.user.findUnique({
@@ -115,9 +119,9 @@ export class GamesService {
       );
     }
 
-    return this.prisma.gameHistory.create({
+    const gameHistory = await this.prisma.gameHistory.create({
       data: {
-        gameId: input.gameId,
+        gameId,
         userId,
         duration: input.duration,
         state: input.state,
@@ -136,6 +140,79 @@ export class GamesService {
         game: true,
       },
     });
+
+    await this.missionsService.updateProgress(userId, 'game_played', {
+      gameId,
+    });
+
+    const unlockedAchievements =
+      await this.achievementsService.checkAchievementsAfterGame(userId, gameId);
+
+    if (unlockedAchievements.length > 0) {
+      console.log(
+        `🎉 ${unlockedAchievements.length} logro(s) desbloqueado(s):`,
+      );
+      unlockedAchievements.forEach(({ achievement }) => {
+        console.log(`   🏆 ${achievement.title} (${achievement.rarity})`);
+      });
+    }
+
+    // 2. Si ganó
+    if (input.state === 'won') {
+      await this.missionsService.updateProgress(userId, 'game_won', {
+        gameId,
+      });
+
+      // 3. Victoria perfecta (sin daño)
+      if (!input.totalDamage || input.totalDamage === 0) {
+        await this.missionsService.updateProgress(userId, 'perfect_win', {
+          gameId,
+          damageTaken: 0,
+        });
+      }
+
+      // 4. Calcular racha actual
+      const streak = await this.calculateCurrentStreak(userId, gameId);
+      await this.missionsService.updateProgress(userId, 'win_streak', {
+        gameId,
+        currentStreak: streak,
+      });
+    }
+
+    // 5. Score total
+    await this.missionsService.updateProgress(userId, 'total_score', {
+      gameId,
+      score: scoreToSave,
+    });
+
+    // 6. Verificar si jugó ambos juegos
+    await this.missionsService.updateProgress(userId, 'play_both_games', {
+      gameId,
+    });
+
+    return gameHistory;
+  }
+
+  private async calculateCurrentStreak(userId: string, gameId?: string) {
+    const games = await this.prisma.gameHistory.findMany({
+      where: {
+        userId,
+        ...(gameId && { gameId }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    let streak = 0;
+    for (const game of games) {
+      if (game.state === 'won') {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
   }
 
   async getUserGameHistory(userId: string, gameId?: string) {

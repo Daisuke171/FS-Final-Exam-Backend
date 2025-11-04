@@ -8,37 +8,39 @@ datasource db {
 }
 
 model User {
-  id                    String         @id @default(uuid())
+  id                    String                @id @default(uuid())
   name                  String
   lastname              String
-  email                 String         @unique
-  username              String         @unique
+  email                 String                @unique
+  username              String                @unique
   password              String?
   birthday              DateTime
-  nickname              String?        @unique @default("guest")
-  experience            Int            @default(0)
-  coins                 Float          @default(0)
-  levelId               Int            @map("level_id")
-  level                 Level          @relation(fields: [levelId], references: [id])
+  nickname              String?               @unique @default("guest")
+  experience            Int                   @default(0)
+  coins                 Float                 @default(0)
+  levelId               Int                   @map("level_id")
+  level                 Level                 @relation(fields: [levelId], references: [id])
   skins                 UserSkin[]
   gameHistories         GameHistory[]
   gameFavorites         GameFavorite[]
   notifications         Notification[]
   // Relaciones de amistad
-  friendsRequested      Friend[]       @relation("friendsRequested") // envié la solicitud
-  friendsReceived       Friend[]       @relation("friendsReceived") // recibí la solicitud
-  friendInvitesSent     FriendInvite[] @relation("FriendInvitesSent") // yo generé el link
-  friendInvitesTargeted FriendInvite[] @relation("FriendInvitesTarget") // link dirigido a mí
-  friendInvitesUsed     FriendInvite[] @relation("FriendInvitesUsed") // yo usé el link
+  friendsRequested      Friend[]              @relation("friendsRequested") // envié la solicitud
+  friendsReceived       Friend[]              @relation("friendsReceived") // recibí la solicitud
+  friendInvitesSent     FriendInvite[]        @relation("FriendInvitesSent") // yo generé el link
+  friendInvitesTargeted FriendInvite[]        @relation("FriendInvitesTarget") // link dirigido a mí
+  friendInvitesUsed     FriendInvite[]        @relation("FriendInvitesUsed") // yo usé el link
   chats                 Chat[]
   // Relaciones de llamadas
-  callsMade             Call[]         @relation("CallsAsCaller")
-  callsReceived         Call[]         @relation("CallsAsCallee")
-  createdAt             DateTime       @default(now()) @map("created_at")
-  updatedAt             DateTime       @updatedAt @map("updated_at")
+  callsMade             Call[]                @relation("CallsAsCaller")
+  callsReceived         Call[]                @relation("CallsAsCallee")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
   // Relacion de RefreshToken
   refreshTokens         RefreshToken[]
-  googleId              String?        @unique
+  googleId              String?               @unique
+  missions              UserMissionProgress[]
+  achievements          UserAchievement[]
 
   @@map("users")
 }
@@ -287,4 +289,137 @@ model RefreshToken {
   expiresAt DateTime?
   usedAt    DateTime?
   revoked   Boolean   @default(false)
+}
+
+model Mission {
+  id          String            @id @default(uuid())
+  title       String            @unique
+  description String
+  type        MissionType       @default(GENERAL)
+  difficulty  MissionDifficulty @default(EASY)
+  icon        String
+
+  targetType  String
+  targetValue Int
+  gameId      String?
+
+  xpReward    Int   @default(0)
+  coinsReward Float @default(0)
+
+  active Boolean @default(true)
+  order  Int     @default(0)
+
+  progress UserMissionProgress[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("missions")
+}
+
+model UserMissionProgress {
+  id        String @id @default(uuid())
+  userId    String @map("user_id")
+  missionId String @map("mission_id")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  currentProgress Int     @default(0)
+  completed       Boolean @default(false)
+  claimedReward   Boolean @default(false)
+
+  resetAt       DateTime? @map("reset_at")
+  lastResetDate DateTime? @map("last_reset_date")
+
+  completedAt DateTime? @map("completed_at")
+  claimedAt   DateTime? @map("claimed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, missionId])
+  @@index([userId])
+  @@index([missionId])
+  @@index([completed])
+  @@map("user_mission_progress")
+}
+
+enum MissionType {
+  GENERAL
+  DAILY
+  WEEKLY
+}
+
+enum MissionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Achievement {
+  id          String              @id @default(uuid())
+  title       String              @unique
+  description String
+  rarity      AchievementRarity   @default(COMMON)
+  category    AchievementCategory @default(GAMEPLAY)
+  icon        String              @default("heroicons:trophy-20-solid")
+
+  targetType  String
+  targetValue Int
+  gameId      String?
+
+  xpReward    Int   @default(0)
+  coinsReward Float @default(0)
+
+  active Boolean @default(true)
+  hidden Boolean @default(false)
+  order  Int     @default(0)
+
+  users UserAchievement[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String @id @default(uuid())
+  userId        String @map("user_id")
+  achievementId String @map("achievement_id")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  currentProgress Int       @default(0)
+  unlockedAt      DateTime? @map("unlocked_at")
+
+  seen Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@index([unlockedAt])
+  @@map("user_achievements")
+}
+
+enum AchievementRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum AchievementCategory {
+  GAMEPLAY
+  SOCIAL
+  PROGRESSION
+  COLLECTION
+  SPECIAL
+  COMPETITIVE
 }

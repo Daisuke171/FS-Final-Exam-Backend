@@ -4,7 +4,7 @@ import { UserService } from '@modules/user/user.service';
 export abstract class GameState {
   abstract handleJoin(playerId: string, game: Game): void;
   abstract handleDisconnect(playerId: string, game: Game): void;
-  abstract onEnter(game: Game): void;
+  abstract onEnter(game: Game);
   onExit?: (game: Game) => void;
 }
 
@@ -265,6 +265,7 @@ export class PlayingState extends GameState {
 }
 
 export class FinishedState extends GameState {
+  private readonly GAME_NAME = 'Turing Detective';
   async onEnter(game: Game) {
     // Decide winner by higher score; tie allowed
     const [p1, p2] = Array.from(game.players.keys());
@@ -291,19 +292,16 @@ export class FinishedState extends GameState {
       const usersService = game.getUsersService();
       const duration = Math.floor((Date.now() - game.startTime) / 1000);
 
-      // Resolve gameId by name to avoid hardcoding
-      const cwGame = await gamesApiService.findByName('Code War');
-      const gameId = cwGame.id;
-
       const userId1 = p1 ? game.playerUserIds.get(p1) : undefined;
       const userId2 = p2 ? game.playerUserIds.get(p2) : undefined;
 
       if (p1 && userId1) {
-        const state1 = winner === p1 ? 'won' : winner === null ? 'draw' : 'lost';
+        const state1 =
+          winner === p1 ? 'won' : winner === null ? 'draw' : 'lost';
         const score1 = Math.round(s1);
         await gamesApiService.saveGameResult(
           {
-            gameId,
+            gameName: this.GAME_NAME,
             duration,
             state: state1 as any,
             score: score1,
@@ -315,11 +313,12 @@ export class FinishedState extends GameState {
         await usersService.addExperience(userId1, xp1);
       }
       if (p2 && userId2) {
-        const state2 = winner === p2 ? 'won' : winner === null ? 'draw' : 'lost';
+        const state2 =
+          winner === p2 ? 'won' : winner === null ? 'draw' : 'lost';
         const score2 = Math.round(s2);
         await gamesApiService.saveGameResult(
           {
-            gameId,
+            gameName: this.GAME_NAME,
             duration,
             state: state2 as any,
             score: score2,
@@ -331,8 +330,6 @@ export class FinishedState extends GameState {
         await usersService.addExperience(userId2, xp2);
       }
     } catch (err) {
-      // log and continue
-      // eslint-disable-next-line no-console
       console.error('Error saving Coding War result:', err);
     }
 
