@@ -5,6 +5,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { GameFavoriteResolver } from './game-favorite.resolver';
 import { MissionsModule } from '@modules/missions/missions.module';
 import { GameCacheService } from './game-cache.service';
+import { AchievementsModule } from '@modules/achievements/achievements.module';
 
 @Module({
   providers: [
@@ -15,6 +16,6 @@ import { GameCacheService } from './game-cache.service';
     GameCacheService,
   ],
   exports: [GamesService, GameCacheService],
-  imports: [MissionsModule],
+  imports: [MissionsModule, AchievementsModule],
 })
 export class GamesModule {}
