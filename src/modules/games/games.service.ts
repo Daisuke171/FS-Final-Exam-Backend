@@ -5,6 +5,7 @@ import { UpdateGameInput } from './inputs/update-game.input';
 import { SaveGameResultInput } from './inputs/save-game.input';
 import { MissionsService } from '@modules/missions/missions.service';
 import { GameCacheService } from './game-cache.service';
+import { AchievementsService } from '@modules/achievements/achievements.service';
 
 @Injectable()
 export class GamesService {
@@ -12,6 +13,7 @@ export class GamesService {
     private readonly prisma: PrismaService,
     private readonly missionsService: MissionsService,
     private readonly gameCache: GameCacheService,
+    private readonly achievementsService: AchievementsService,
   ) {}
 
   // CRUD de juegos
@@ -142,6 +144,18 @@ export class GamesService {
     await this.missionsService.updateProgress(userId, 'game_played', {
       gameId,
     });
+
+    const unlockedAchievements =
+      await this.achievementsService.checkAchievementsAfterGame(userId, gameId);
+
+    if (unlockedAchievements.length > 0) {
+      console.log(
+        `🎉 ${unlockedAchievements.length} logro(s) desbloqueado(s):`,
+      );
+      unlockedAchievements.forEach(({ achievement }) => {
+        console.log(`   🏆 ${achievement.title} (${achievement.rarity})`);
+      });
+    }
 
     // 2. Si ganó
     if (input.state === 'won') {
