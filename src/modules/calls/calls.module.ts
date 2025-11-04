@@ -1,17 +1,12 @@
 import { Module } from '@nestjs/common';
 import { CallsResolver } from './calls.resolver';
 import { CallsService } from './calls.service';
-import { PrismaService } from 'prisma/prisma.service';
-import { ObservableService } from '@common/observable.service';
-import { PubSub } from 'graphql-subscriptions';
+import { PrismaModule } from 'prisma/prisma.module';
+import { CallGateway } from './calls.gateway';
 
 @Module({
-  providers: [
-    CallsResolver,
-    CallsService,
-    PrismaService,
-    ObservableService,
-    { provide: 'PUB_SUB', useValue: new PubSub() },
-  ],
+  imports: [PrismaModule],
+  providers: [CallGateway],
+  exports: [CallGateway],
 })
-export class CallsModule {}
+export class CallModule {}

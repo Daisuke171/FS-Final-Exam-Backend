@@ -1,4 +1,126 @@
+import { CallGateway } from './calls.gateway';
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'prisma/prisma.service';
+import { ObservableService } from '@common/observable.service';
+import { StartCallInput } from './dto/start-call.input';
+import { AnswerCallInput } from './dto/answer-call.input';
+import { RejectCallInput } from './dto/reject-call.input';
+import { EndCallInput } from './dto/end-call.input';
+import { IceCandidateInput } from './dto/ice-candidate.input';
+import { CallStatus } from './models/call.model';
+
+@Injectable()
+export class CallsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bus: ObservableService,
+    private readonly gateway: CallGateway,
+  ) {}
+
+  async startCall(input: StartCallInput) {
+    const { callerId, calleeId, sdpOffer } = input;
+    if (callerId === calleeId) throw new BadRequestException('No podés llamarte a vos mismo');
+
+    const [caller, callee] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: callerId }, select: { id: true } }),
+      this.prisma.user.findUnique({ where: { id: calleeId }, select: { id: true } }),
+    ]);
+    if (!caller || !callee) throw new NotFoundException('Usuario no encontrado');
+
+    const call = await this.prisma.call.create({
+      data: { callerId, calleeId, sdpOffer, status: CallStatus.RINGING },
+    });
+
+    // socket → ring al callee
+    //this.gateway.ring(calleeId, { callId: call.id, from: callerId, sdpOffer });
+
+    // opcional: pub/sub interno
+    this.bus.notify({ type: 'call', data: { event: 'ringing', callId: call.id, callerId, calleeId } });
+
+    return call;
+  }
+
+  async answerCall(input: AnswerCallInput) {
+    const { callId, calleeId, sdpAnswer } = input;
+    const call = await this.prisma.call.findUnique({ where: { id: callId } });
+    if (!call) throw new NotFoundException('Call no existe');
+    if (call.calleeId !== calleeId) throw new ForbiddenException('Solo el callee puede responder');
+    if (call.status !== CallStatus.RINGING) throw new BadRequestException('La llamada no está sonando');
+
+    const updated = await this.prisma.call.update({
+      where: { id: callId },
+      data: { sdpAnswer, status: CallStatus.ACCEPTED },
+    });
+
+    // socket → accepted al caller (con answer)
+    //this.gateway.accepted(call.callerId, { callId, sdpAnswer });
+
+    this.bus.notify({ type: 'call', data: { event: 'accepted', callId, callerId: call.callerId, calleeId } });
+    return updated;
+  }
+
+  async rejectCall(input: RejectCallInput) {
+    const { callId, calleeId } = input;
+    const call = await this.prisma.call.findUnique({ where: { id: callId } });
+    if (!call) throw new NotFoundException('Call no existe');
+    if (call.calleeId !== calleeId) throw new ForbiddenException('Solo el callee puede rechazar');
+    if (call.status !== CallStatus.RINGING) throw new BadRequestException('La llamada no está sonando');
+
+    const updated = await this.prisma.call.update({
+      where: { id: callId },
+      data: { status: CallStatus.REJECTED },
+    });
+
+    // socket → rejected a ambos
+    //this.gateway.rejectedBoth(call.callerId, call.calleeId, { callId });
+
+    this.bus.notify({ type: 'call', data: { event: 'rejected', callId, callerId: call.callerId, calleeId } });
+    return updated;
+  }
+
+  async endCall(input: EndCallInput) {
+    const { callId, userId } = input;
+    const call = await this.prisma.call.findUnique({ where: { id: callId } });
+    if (!call) throw new NotFoundException('Call no existe');
+
+    const isParticipant = [call.callerId, call.calleeId].includes(userId);
+    if (!isParticipant) throw new ForbiddenException('Solo participantes pueden cortar');
+
+    if (call.status === CallStatus.ENDED || call.status === CallStatus.REJECTED) return call;
+
+    const updated = await this.prisma.call.update({
+      where: { id: callId },
+      data: { status: CallStatus.ENDED },
+    });
+
+    // socket → ended a ambos
+   // this.gateway.endedBoth(call.callerId, call.calleeId, { callId, by: userId });
+
+    this.bus.notify({ type: 'call', data: { event: 'ended', callId, by: userId, callerId: call.callerId, calleeId: call.calleeId } });
+    return updated;
+  }
+
+  async sendIceCandidate(input: IceCandidateInput) {
+    // Si querés relay directo desde service (sin usar SubscribeMessage),
+    // podés exponer un helper en gateway (p.ej. forwardIce(roomId,candidate)).
+    this.bus.notify({ type: 'call', data: { event: 'ice', ...input } });
+    return true;
+  }
+
+   async getActiveCallsByUser(userId: string) {
+    return this.prisma.call.findMany({
+      where: {
+        OR: [{ callerId: userId }, { calleeId: userId }],
+        status: { in: [CallStatus.RINGING, CallStatus.ACCEPTED] as any },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+}
+
+
+
+/* import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { ObservableService } from '@common/observable.service';
 import { StartCallInput } from './dto/start-call.input';
@@ -26,7 +148,7 @@ export class CallsService {
     if (!caller || !callee) throw new NotFoundException('Usuario no encontrado');
 
     const call = await this.prisma.call.create({
-      data: { callerId, calleeId, sdpOffer, status: 'RINGING' },
+      data: { callerId, calleeId, sdpOffer, status: CallStatus.RINGING },
     });
 
     // Notificación interna/broadcast
@@ -43,11 +165,11 @@ export class CallsService {
     const call = await this.prisma.call.findUnique({ where: { id: callId } });
     if (!call) throw new NotFoundException('Call no existe');
     if (call.calleeId !== calleeId) throw new ForbiddenException('Solo el callee puede responder');
-    if (call.status !== 'RINGING') throw new BadRequestException('La llamada no está sonando');
+    if (call.status !== CallStatus.RINGING) throw new BadRequestException('La llamada no está sonando');
 
     const updated = await this.prisma.call.update({
       where: { id: callId },
-      data: { sdpAnswer, status: 'ACCEPTED' },
+      data: { sdpAnswer, status: CallStatus.ACCEPTED },
     });
 
     this.bus.notify({
@@ -63,11 +185,11 @@ export class CallsService {
     const call = await this.prisma.call.findUnique({ where: { id: callId } });
     if (!call) throw new NotFoundException('Call no existe');
     if (call.calleeId !== calleeId) throw new ForbiddenException('Solo el callee puede rechazar');
-    if (call.status !== 'RINGING') throw new BadRequestException('La llamada no está sonando');
+    if (call.status !== CallStatus.RINGING) throw new BadRequestException('La llamada no está sonando');
 
     const updated = await this.prisma.call.update({
       where: { id: callId },
-      data: { status: 'REJECTED' },
+      data: { status: CallStatus.REJECTED },
     });
 
     this.bus.notify({
@@ -86,11 +208,11 @@ export class CallsService {
     const isParticipant = [call.callerId, call.calleeId].includes(userId);
     if (!isParticipant) throw new ForbiddenException('Solo participantes pueden cortar');
 
-    if (call.status === 'ENDED' || call.status === 'REJECTED') return call;
+    if (call.status === CallStatus.ENDED || call.status === CallStatus.REJECTED) return call;
 
     const updated = await this.prisma.call.update({
       where: { id: callId },
-      data: { status: 'ENDED' },
+      data: { status: CallStatus.ENDED },
     });
 
     this.bus.notify({
@@ -125,3 +247,4 @@ export class CallsService {
     });
   }
 }
+ */

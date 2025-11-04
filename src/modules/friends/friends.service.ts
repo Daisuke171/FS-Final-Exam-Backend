@@ -17,27 +17,14 @@ import {
   ToggleFriendActiveInput,
 } from './dto';
 import { FriendStatus } from './dto/update-friend.input';
-
-// type FriendListItem = Prisma.FriendGetPayload<{
-//   select: {
-//     id: true;
-//     status: true;
-//     active: true;
-//     requesterId: true;
-//     receiverId: true;
-//     createdAt: true;
-//     updatedAt: true;
-//     requester: { select: { id: true; nickname: true } };
-//     receiver: { select: { id: true; nickname: true } };
-//   };
-// }>;
+import { FriendEdgeUser } from './models/friend.model';
 
 @Injectable()
 export class FriendsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bus: ObservableService,
-  ) {}
+  ) { }
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
@@ -106,17 +93,17 @@ export class FriendsService {
       ...r,
       requester: r.requester
         ? {
-            id: r.requester.id,
-            nickname: r.requester.nickname,
-            activeSkin: r.requester.skins?.[0]?.skin ?? null,
-          }
+          id: r.requester.id,
+          nickname: r.requester.nickname,
+          activeSkin: r.requester.skins?.[0]?.skin ?? null,
+        }
         : null,
       receiver: r.receiver
         ? {
-            id: r.receiver.id,
-            nickname: r.receiver.nickname,
-            activeSkin: r.receiver.skins?.[0]?.skin ?? null,
-          }
+          id: r.receiver.id,
+          nickname: r.receiver.nickname,
+          activeSkin: r.receiver.skins?.[0]?.skin ?? null,
+        }
         : null,
     }));
   }
@@ -387,4 +374,36 @@ export class FriendsService {
     });
     return true;
   }
+
+  async getFriendById(id: string): Promise<FriendEdgeUser | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nickname: true,
+        skins: {
+          select: {
+            active: true,               // 👈 si tenés flag `active` en UserSkin
+            skin: {
+              select: { id: true, name: true, img: true, level: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) return null;
+
+    const active = user.skins.find(s => s.active)?.skin ?? null;
+
+    return {
+      id: user.id,
+      nickname: user.nickname ?? null,
+      activeSkin: active
+        ? { id: active.id, name: active.name, img: active.img, level: active.level }
+        : null,
+    };
+  }
+
+
 }

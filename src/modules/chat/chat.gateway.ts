@@ -13,15 +13,15 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { ObservableService } from '@common/observable.service';
 import { Subscription } from 'rxjs';
+import { PrismaService } from 'prisma/prisma.service';
 
 const room = (chatId: string) => `chat:${chatId}`;
 
 @WebSocketGateway({
-  origin: [
-    'https://fs-final-exam-frontend.vercel.app',
-    'http://localhost:3000',
-  ],
-  credentials: true,
+namespace: '/chat',
+  cors: {
+    origin: '*',
+  },
 })
 export class ChatGateway
   implements
@@ -38,6 +38,7 @@ export class ChatGateway
   constructor(
     private readonly chat: ChatService,
     private readonly bus: ObservableService,
+     private readonly prisma: PrismaService,
   ) {}
 
   afterInit() {
@@ -69,6 +70,8 @@ export class ChatGateway
 
   handleDisconnect(client: Socket) {
     this.users.delete(client.id);
+    console.log("cliente deconectado");
+    
   }
 
   // Solo si aún no hay auth en handshake
@@ -89,8 +92,12 @@ export class ChatGateway
     this.ensureUser(client);
     await client.join(room(chatId));
 
-    const last = await this.chat.getMessages(chatId);
-    client.emit('chat:history', last);
+    const last = await this.prisma.chatMessage.findMany({
+    where: { chatId },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+    client.emit('chat:history', last.reverse());   
   }
 
   @SubscribeMessage('chat:leave')
@@ -103,18 +110,21 @@ export class ChatGateway
   }
 
   @SubscribeMessage('chat:send')
-  async sendMessage(
+   sendMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() { chatId, text }: { chatId: string; text: string },
   ) {
     const user = this.ensureUser(client);
-    const saved = await this.chat.sendMessage({
+    const saved =  this.chat.sendMessage({
       chatId,
       senderId: user.id,
       message: text,
     });
 
     client.emit('chat:sent', saved);
+    this.server.to(chatId).emit('chat:sent', saved);
+    console.log(`Chat ${chatId} enviado mensaje ${text}`);
+    console.log(`Usuario ${user} envió ${saved}`);
   }
 
   @SubscribeMessage('chat:read')
@@ -124,6 +134,23 @@ export class ChatGateway
   ) {
     this.ensureUser(client);
     await this.chat.markRead(chatId, messageId);
+    //client.emit('chat:read', { chatId, messageId });
+    this.server.to(client.id).emit('chat:read', { chatId, messageId });
+    console.log(`Chat ${chatId} mencionado como leído por ${client.id}`);
+    
+  }
+
+    @SubscribeMessage('chat:readAll')
+  async readAllMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { chatId, userId }: { chatId: string; userId: string },
+  ) {
+    this.ensureUser(client);
+    await this.chat.markAllRead(chatId, userId);
+    //client.emit('chat:read', { chatId, userId });
+    this.server.to(client.id).emit('chat:readAll', { chatId, userId });
+    console.log(`Chat ${chatId} mencionado como todos los msgs leídos por ${client.id}`);
+    
   }
 
   private ensureUser(client: Socket) {

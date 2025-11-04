@@ -15,7 +15,7 @@ export class SkinLite {
   level!: number;
 
   @Field(() => Float) 
-  value!: number;
+  value?: number;
 }
 
 @ObjectType()
@@ -23,8 +23,8 @@ export class FriendEdgeUser {
   @Field(() => ID) 
   id!: string;
 
-  @Field() 
-  nickname!: string;
+  @Field(() => String, { nullable: true }) 
+  nickname?: string | null;
 
   @Field(() => SkinLite, { nullable: true })
   activeSkin?: SkinLite | null;
