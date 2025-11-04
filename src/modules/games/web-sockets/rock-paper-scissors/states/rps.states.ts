@@ -1,7 +1,7 @@
 import { UserService } from '@modules/user/user.service';
 import { getRandomMove } from '../utils/getRandomMove';
 import { GamesService } from '@modules/games/games.service';
-import { getNextLevel } from '../utils/getNextLevel';
+import { calculateLevelData } from '../utils/level.helper';
 
 export enum Moves {
   ROCK = 'piedra',
@@ -484,6 +484,7 @@ export class RevealingState extends GameState {
 
 export class FinishedState extends GameState {
   name = 'finished';
+  private readonly GAME_NAME = 'Piedra, Papel o Tijeras';
   async onEnter(game: Game) {
     const [p1, p2] = Array.from(game.players.keys());
     const hp1 = game.getHP(p1);
@@ -522,7 +523,6 @@ export class FinishedState extends GameState {
       return;
     }
 
-    const gameId = process.env.RPS_ID || 'rps-id-2';
     const maxHp = 100;
     let player1Score: number | null = null;
     let player2Score: number | null = null;
@@ -549,7 +549,7 @@ export class FinishedState extends GameState {
 
       await gamesApiService.saveGameResult(
         {
-          gameId: gameId,
+          gameName: this.GAME_NAME,
           duration,
           state: winner === p1 ? 'won' : winner === null ? 'draw' : 'lost',
           score: player1Score,
@@ -560,7 +560,7 @@ export class FinishedState extends GameState {
 
       await gamesApiService.saveGameResult(
         {
-          gameId: gameId,
+          gameName: this.GAME_NAME,
           duration,
           state: winner === p2 ? 'won' : winner === null ? 'draw' : 'lost',
           score: player2Score,
@@ -582,14 +582,14 @@ export class FinishedState extends GameState {
         player2Xp,
       );
 
-      const player1LevelData = this.calculateLevelData(
-        user1Before,
+      const player1LevelData = calculateLevelData(
+        user1Before!,
         player1XpResult,
         player1Xp,
       );
 
-      const player2LevelData = this.calculateLevelData(
-        user2Before,
+      const player2LevelData = calculateLevelData(
+        user2Before!,
         player2XpResult,
         player2Xp,
       );
@@ -612,77 +612,6 @@ export class FinishedState extends GameState {
       });
     } catch (error) {
       console.error('Error al guardar el resultado de la partida:', error);
-    }
-  }
-
-  private calculateLevelData(userBefore: any, xpResult: any, xpGained: number) {
-    const currentLevelXpRequired = userBefore.level.experienceRequired;
-    const experienceBefore = userBefore.experience;
-    const experienceAfter = xpResult.user.experience;
-
-    const xpInCurrentLevelBefore = experienceBefore - currentLevelXpRequired;
-
-    const nextLevel = getNextLevel(userBefore.level.atomicNumber + 1);
-    const nextLevelXpRequired = nextLevel?.experienceRequired || 99999;
-
-    const xpNeededForLevel = nextLevelXpRequired - currentLevelXpRequired;
-    const progressBefore = (xpInCurrentLevelBefore / xpNeededForLevel) * 100;
-
-    if (xpResult.leveledUp) {
-      const newLevelXpRequired = xpResult.user.level.experienceRequired;
-      const xpInNewLevel = experienceAfter - newLevelXpRequired;
-      const nextNextLevel = getNextLevel(xpResult.newLevel + 1);
-      const xpNeededForNewLevel =
-        (nextNextLevel?.experienceRequired || 99999) - newLevelXpRequired;
-      const progressAfter = (xpInNewLevel / xpNeededForNewLevel) * 100;
-
-      return {
-        xpGained,
-        leveledUp: true,
-        oldLevel: xpResult.previousLevel,
-        newLevel: xpResult.newLevel,
-        unlockedSkins: xpResult.unlockedSkins || [],
-
-        xpInCurrentLevelBefore,
-        xpNeededForLevelBefore: xpNeededForLevel,
-        progressBefore,
-
-        xpInCurrentLevelAfter: xpInNewLevel,
-        xpNeededForLevelAfter: xpNeededForNewLevel,
-        progressAfter,
-
-        oldLevelName: userBefore.level.name,
-        oldLevelSymbol: userBefore.level.chemicalSymbol,
-        oldLevelColor: userBefore.level.color,
-
-        newLevelName: xpResult.user.level.name,
-        newLevelSymbol: xpResult.user.level.chemicalSymbol,
-        newLevelColor: xpResult.user.level.color,
-      };
-    } else {
-      const xpInCurrentLevelAfter = experienceAfter - currentLevelXpRequired;
-      const progressAfter = (xpInCurrentLevelAfter / xpNeededForLevel) * 100;
-
-      return {
-        xpGained,
-        leveledUp: false,
-        oldLevel: xpResult.newLevel,
-        newLevel: xpResult.newLevel,
-        unlockedSkins: [],
-
-        xpInCurrentLevelBefore,
-        xpInCurrentLevelAfter,
-        xpNeededForLevel,
-        progressBefore,
-        progressAfter,
-
-        oldLevelName: userBefore.level.name,
-        oldLevelSymbol: userBefore.level.chemicalSymbol,
-        oldLevelColor: userBefore.level.color,
-        newLevelName: userBefore.level.name,
-        newLevelSymbol: userBefore.level.chemicalSymbol,
-        newLevelColor: userBefore.level.color,
-      };
     }
   }
 

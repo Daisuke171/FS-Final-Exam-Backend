@@ -17,8 +17,11 @@ import { Subscription } from 'rxjs';
 const room = (chatId: string) => `chat:${chatId}`;
 
 @WebSocketGateway({
-  namespace: '/chat',
-  cors: { origin: '*', credentials: true },
+  origin: [
+    'https://fs-final-exam-frontend.vercel.app',
+    'http://localhost:3000',
+  ],
+  credentials: true,
 })
 export class ChatGateway
   implements

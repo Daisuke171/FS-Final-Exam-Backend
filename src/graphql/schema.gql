@@ -7,6 +7,46 @@ input AcceptFriendInviteInput {
   token: String!
 }
 
+type Achievement {
+  active: Boolean!
+  category: AchievementCategory!
+  createdAt: DateTime!
+  description: String!
+  gameId: String
+  icon: String!
+  id: ID!
+  order: Int!
+  rarity: AchievementRarity!
+  targetType: String!
+  targetValue: Int!
+  title: String!
+  updatedAt: DateTime!
+}
+
+enum AchievementCategory {
+  COLLECTION
+  COMPETITIVE
+  GAMEPLAY
+  PROGRESSION
+  SOCIAL
+  SPECIAL
+}
+
+enum AchievementRarity {
+  COMMON
+  EPIC
+  LEGENDARY
+  RARE
+  UNCOMMON
+}
+
+type AchievementStatsResponse {
+  locked: Int!
+  percentage: Int!
+  total: Int!
+  unlocked: Int!
+}
+
 input AnswerCallInput {
   callId: ID!
   calleeId: ID!
@@ -47,6 +87,13 @@ type ChatMessage {
   timestamp: DateTime!
 }
 
+type ClaimRewardResponse {
+  levelData: LevelProgressData!
+  progress: UserMissionProgress!
+  rewards: MissionRewards!
+  user: UserGraph!
+}
+
 input CreateFriendInviteInput {
   inviterId: String!
   targetUsername: String
@@ -75,6 +122,20 @@ input CreateLevelInput {
 
 type CreateManyResult {
   count: Int!
+}
+
+input CreateMissionInput {
+  coinsReward: Float! = 0
+  description: String!
+  difficulty: MissionDifficulty!
+  gameId: String
+  icon: String!
+  order: Int! = 0
+  targetType: String!
+  targetValue: Int!
+  title: String!
+  type: MissionType!
+  xpReward: Int!
 }
 
 input CreateSkinInput {
@@ -213,6 +274,26 @@ type Level {
   users: [UserGraph!]
 }
 
+type LevelProgressData {
+  leveledUp: Boolean!
+  newLevel: Int!
+  newLevelColor: String!
+  newLevelName: String!
+  newLevelSymbol: String!
+  oldLevel: Int!
+  oldLevelColor: String!
+  oldLevelName: String!
+  oldLevelSymbol: String!
+  progressAfter: Float!
+  progressBefore: Float!
+  unlockedSkins: [Skin!]!
+  xpGained: Int!
+  xpInCurrentLevelAfter: Float!
+  xpInCurrentLevelBefore: Float!
+  xpNeededForLevelAfter: Float
+  xpNeededForLevelBefore: Float
+}
+
 type LevelUpResponse {
   leveledUp: Boolean!
   newLevel: Int!
@@ -226,25 +307,47 @@ input LoginInput {
   usernameOrEmail: String!
 }
 
+enum MissionDifficulty {
+  EASY
+  HARD
+  MEDIUM
+}
+
+type MissionRewards {
+  coins: Float!
+  xp: Int!
+}
+
+enum MissionType {
+  DAILY
+  GENERAL
+  WEEKLY
+}
+
 type Mutation {
   acceptFriendInvite(input: AcceptFriendInviteInput!): Friend!
   activateSkin(skinId: ID!): UserSkin!
   addExperience(experience: Int!): LevelUpResponse!
   answerCall(input: AnswerCallInput!): Call!
   assignSkin(data: CreateUserSkinInput!): UserSkin!
+  claimMissionReward(missionId: ID!): ClaimRewardResponse!
   createFriendInvite(input: CreateFriendInviteInput!): String!
   createGame(input: CreateGameInput!): Game!
   createLevel(data: CreateLevelInput!): Level!
   createManyLevels(data: [CreateLevelInput!]!): CreateManyResult!
+  createMission(input: CreateMissionInput!): UserMission!
   createSkin(data: CreateSkinInput!): Skin!
   deleteGame(id: ID!): Game!
   deleteLevel(id: Int!): Level!
+  deleteMission(id: ID!): Boolean!
   deleteSkin(id: ID!): Skin!
   deleteUser(id: ID!): UserGraph!
   endCall(callId: ID!): Call!
   googleAuth(googleAuthInput: GoogleAuthInput!): AuthResponse!
+  initializeMissions: Boolean!
   login(loginInput: LoginInput!): AuthResponse!
   logout: Boolean!
+  markAchievementsAsSeen(achievementIds: [ID!]!): Boolean!
   markMessageRead(chatId: ID!, messageId: ID!): ChatMessage!
   refreshAccessToken(refreshToken: String!): AuthResponse!
   register(registerInput: RegisterInput!): UserGraph!
@@ -260,9 +363,11 @@ type Mutation {
   unlockSkins: [Skin!]!
   updateFriendStatus(input: UpdateFriendStatusInput!): Friend!
   updateGame(id: ID!, input: UpdateGameInput!): Game!
+  updateMission(id: ID!, input: UpdateMissionInput!): UserMission!
 }
 
 type Query {
+  achievementStats: AchievementStatsResponse!
   friendPeersOfUser(userId: ID!): [FriendPeer!]!
   game(id: ID!): Game!
   games: [Game!]!
@@ -272,10 +377,13 @@ type Query {
   levels: [Level!]!
   me: UserGraph!
   messages(chatId: ID!): [ChatMessage!]!
+  myAchievements: [UserAchievementResponse!]!
   myActiveCalls: [Call!]!
   myHistoryFriends(userId: ID!): [Friend!]!
+  myMissions: [UserMission!]!
   skin(id: ID!): Skin!
   skins: [Skin!]!
+  unseenAchievements: [UnseenAchievementResponse!]!
   userFavorites: [GameFavorite!]!
   userGames(gameId: ID): [GameHistory!]!
   userSkins: [UserSkin!]!
@@ -306,7 +414,7 @@ input RequestFriendByUsernameInput {
 
 input SaveGameResultInput {
   duration: Int!
-  gameId: ID!
+  gameName: String!
   score: Int!
   state: String!
   totalDamage: Int!
@@ -359,6 +467,11 @@ input ToggleFriendActiveInput {
   id: ID!
 }
 
+type UnseenAchievementResponse {
+  achievement: Achievement!
+  userAchievement: UserAchievement!
+}
+
 input UpdateFriendStatusInput {
   id: ID!
   status: FriendStatus!
@@ -374,6 +487,48 @@ input UpdateGameInput {
   name: String
   rules: String
   score: Int
+}
+
+input UpdateMissionInput {
+  coinsReward: Float = 0
+  description: String
+  difficulty: MissionDifficulty
+  gameId: String
+  icon: String
+  order: Int = 0
+  targetType: String
+  targetValue: Int
+  title: String
+  type: MissionType
+  xpReward: Int
+}
+
+type UserAchievement {
+  achievementId: String!
+  createdAt: DateTime!
+  currentProgress: Int!
+  id: ID!
+  seen: Boolean!
+  unlockedAt: DateTime
+  updatedAt: DateTime!
+  userId: String!
+}
+
+type UserAchievementResponse {
+  active: Boolean!
+  category: AchievementCategory!
+  createdAt: DateTime!
+  description: String!
+  gameId: String
+  icon: String!
+  id: ID!
+  order: Int!
+  rarity: AchievementRarity!
+  targetType: String!
+  targetValue: Int!
+  title: String!
+  updatedAt: DateTime!
+  userAchievement: UserAchievement
 }
 
 type UserGraph {
@@ -400,6 +555,39 @@ type UserGraph {
   totalScore: Int!
   updatedAt: DateTime!
   username: String!
+}
+
+type UserMission {
+  active: Boolean!
+  coinsReward: Float!
+  createdAt: DateTime!
+  description: String!
+  difficulty: MissionDifficulty!
+  gameId: String
+  icon: String!
+  id: ID!
+  order: Int!
+  targetType: String!
+  targetValue: Int!
+  title: String!
+  type: MissionType!
+  updatedAt: DateTime!
+  userProgress: UserMissionProgress
+  xpReward: Int!
+}
+
+type UserMissionProgress {
+  claimedAt: DateTime
+  claimedReward: Boolean!
+  completed: Boolean!
+  completedAt: DateTime
+  createdAt: DateTime!
+  currentProgress: Int!
+  id: ID!
+  missionId: String!
+  resetAt: DateTime
+  updatedAt: DateTime!
+  userId: String!
 }
 
 type UserSkin {
