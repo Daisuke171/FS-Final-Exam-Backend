@@ -1,4 +1,10 @@
-import { MissionDifficulty, MissionType, PrismaClient } from '@prisma/client';
+import {
+  AchievementCategory,
+  AchievementRarity,
+  MissionDifficulty,
+  MissionType,
+  PrismaClient,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CreateLevelInput } from '@modules/games/web-sockets/rock-paper-scissors/utils/getNextLevel';
 
@@ -1403,6 +1409,181 @@ const dailyMissions = [
   },
 ];
 
+const achievements = [
+  // ============================================
+  // LOGROS COMUNES (Common)
+  // ============================================
+  {
+    title: 'Primera Victoria',
+    description: 'Gana tu primera partida',
+    rarity: AchievementRarity.COMMON,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'total_wins',
+    targetValue: 1,
+    order: 1,
+  },
+  {
+    title: 'Jugador Novato',
+    description: 'Juega 10 partidas',
+    rarity: AchievementRarity.COMMON,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'total_games',
+    targetValue: 10,
+    order: 2,
+  },
+
+  // ============================================
+  // LOGROS POCO COMUNES (Uncommon)
+  // ============================================
+  {
+    title: 'Ganador Consistente',
+    description: 'Gana 25 partidas',
+    rarity: AchievementRarity.UNCOMMON,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'total_wins',
+    targetValue: 25,
+    order: 3,
+  },
+  {
+    title: 'Veterano',
+    description: 'Juega 50 partidas',
+    rarity: AchievementRarity.UNCOMMON,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'total_games',
+    targetValue: 50,
+    order: 4,
+  },
+  {
+    title: 'Perfeccionista',
+    description: 'Gana sin recibir daño',
+    rarity: AchievementRarity.UNCOMMON,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'perfect_wins',
+    targetValue: 1,
+    order: 5,
+  },
+
+  // ============================================
+  // LOGROS RAROS (Rare)
+  // ============================================
+  {
+    title: 'Campeón',
+    description: 'Gana 100 partidas',
+    rarity: AchievementRarity.RARE,
+    category: AchievementCategory.COMPETITIVE,
+    targetType: 'total_wins',
+    targetValue: 100,
+    order: 6,
+  },
+  {
+    title: 'Racha Imparable',
+    description: 'Consigue una racha de 5 victorias',
+    rarity: AchievementRarity.RARE,
+    category: AchievementCategory.COMPETITIVE,
+    targetType: 'win_streak',
+    targetValue: 5,
+    order: 7,
+  },
+  {
+    title: 'Maestro del Juego',
+    description: 'Juega 200 partidas',
+    rarity: AchievementRarity.RARE,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'total_games',
+    targetValue: 200,
+    order: 8,
+  },
+  {
+    title: 'Sin Errores',
+    description: 'Gana 10 partidas sin recibir daño',
+    rarity: AchievementRarity.RARE,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'perfect_wins',
+    targetValue: 10,
+    order: 9,
+  },
+
+  // ============================================
+  // LOGROS ÉPICOS (Epic)
+  // ============================================
+  {
+    title: 'Leyenda Viviente',
+    description: 'Gana 500 partidas',
+    rarity: AchievementRarity.EPIC,
+    category: AchievementCategory.COMPETITIVE,
+    targetType: 'total_wins',
+    targetValue: 500,
+    order: 10,
+  },
+  {
+    title: 'Dominación Total',
+    description: 'Consigue una racha de 10 victorias',
+    rarity: AchievementRarity.EPIC,
+    category: AchievementCategory.COMPETITIVE,
+    targetType: 'win_streak',
+    targetValue: 10,
+    order: 11,
+  },
+  {
+    title: 'Coleccionista de Puntos',
+    description: 'Acumula 10,000 puntos',
+    rarity: AchievementRarity.EPIC,
+    category: AchievementCategory.PROGRESSION,
+    targetType: 'total_score',
+    targetValue: 10000,
+    order: 12,
+  },
+  {
+    title: 'Invencible',
+    description: 'Gana 25 partidas perfectas',
+    rarity: AchievementRarity.EPIC,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'perfect_wins',
+    targetValue: 25,
+    order: 13,
+  },
+
+  // ============================================
+  // LOGROS LEGENDARIOS (Legendary)
+  // ============================================
+  {
+    title: 'Dios del Juego',
+    description: 'Gana 1,000 partidas',
+    rarity: AchievementRarity.LEGENDARY,
+    category: AchievementCategory.COMPETITIVE,
+    targetType: 'total_wins',
+    targetValue: 1000,
+    order: 14,
+  },
+  {
+    title: 'Racha Imposible',
+    description: 'Consigue una racha de 25 victorias',
+    rarity: AchievementRarity.LEGENDARY,
+    category: AchievementCategory.COMPETITIVE,
+    targetType: 'win_streak',
+    targetValue: 25,
+    order: 15,
+  },
+  {
+    title: 'Maestro Supremo',
+    description: 'Acumula 100,000 puntos',
+    rarity: AchievementRarity.LEGENDARY,
+    category: AchievementCategory.PROGRESSION,
+    targetType: 'total_score',
+    targetValue: 100000,
+    order: 16,
+  },
+  {
+    title: 'La Perfección',
+    description: 'Gana 100 partidas perfectas',
+    rarity: AchievementRarity.LEGENDARY,
+    category: AchievementCategory.GAMEPLAY,
+    targetType: 'perfect_wins',
+    targetValue: 100,
+    order: 17,
+  },
+];
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -1487,7 +1668,16 @@ async function main() {
     console.log(`Creada o actualizada Misión: ${createdMission.title}`);
   }
 
+  for (const achievement of achievements) {
+    await prisma.achievement.upsert({
+      where: { title: achievement.title },
+      update: achievement,
+      create: achievement,
+    });
+  }
+
   console.log(`Seeding de Misiones terminado.`);
+  console.log(`✅ Created ${achievements.length} achievements`);
   console.log(`✅ Total de misiones: ${allMissions.length}`);
   console.log(`  - Generales: ${generalMissions.length}`);
   console.log(`  - Diarias: ${dailyMissions.length}`);
