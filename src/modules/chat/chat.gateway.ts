@@ -63,9 +63,6 @@ export class ChatGateway
   }
 
   handleConnection() {
-    // Si usás JWT en handshake: decodificar y setear users map acá
-    // const user = decode(client.handshake.auth?.token)
-    // this.users.set(client.id, { id: user.sub, username: user.name })
   }
 
   handleDisconnect(client: Socket) {
@@ -134,7 +131,6 @@ export class ChatGateway
   ) {
     this.ensureUser(client);
     await this.chat.markRead(chatId, messageId);
-    //client.emit('chat:read', { chatId, messageId });
     this.server.to(client.id).emit('chat:read', { chatId, messageId });
     console.log(`Chat ${chatId} mencionado como leído por ${client.id}`);
     
@@ -147,7 +143,6 @@ export class ChatGateway
   ) {
     this.ensureUser(client);
     await this.chat.markAllRead(chatId, userId);
-    //client.emit('chat:read', { chatId, userId });
     this.server.to(client.id).emit('chat:readAll', { chatId, userId });
     console.log(`Chat ${chatId} mencionado como todos los msgs leídos por ${client.id}`);
     
